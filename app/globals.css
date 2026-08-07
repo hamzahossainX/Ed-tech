@@ -1,10 +1,17 @@
 @import "tailwindcss";
+@custom-variant dark (&:where(.dark, .dark *));
 
 :root {
   --ink: #17211b;
   --paper: #f5f3ec;
   --lime: #c8ff65;
   --forest: #173f2c;
+}
+
+.dark {
+  --ink: #f0f7f2;
+  --paper: #080d0a;
+  --forest: #c8ff65;
 }
 
 * { box-sizing: border-box; }
@@ -16,6 +23,14 @@ body {
     radial-gradient(circle at 15% 5%, rgba(200, 255, 101, .22), transparent 28rem),
     var(--paper);
   font-family: Arial, Helvetica, sans-serif;
+  transition: color .2s ease, background-color .2s ease;
+}
+
+.dark body {
+  background:
+    radial-gradient(circle at 15% 5%, rgba(88, 135, 66, .2), transparent 30rem),
+    radial-gradient(circle at 85% 30%, rgba(23, 63, 44, .22), transparent 34rem),
+    var(--paper);
 }
 
 ::selection { background: var(--lime); color: var(--ink); }
