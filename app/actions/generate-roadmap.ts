@@ -72,24 +72,31 @@ export async function generateRoadmap(
 ): Promise<GenerateRoadmapState> {
   const parsedPrompt = promptSchema.safeParse(formData.get("prompt"));
   if (!parsedPrompt.success) return { error: parsedPrompt.error.issues[0].message };
+  const prompt = parsedPrompt.data;
 
   let createdRoadmapId: string;
   try {
-    const completion = await getGroq().chat.completions.create({
-      model: process.env.GROQ_MODEL ?? "openai/gpt-oss-20b",
-      temperature: 0.4,
-      messages: [
-        {
-          role: "system",
-          content: "You are an expert curriculum designer. Create practical, sequential learning roadmaps with measurable milestones. Respect the learner's stated time limit. For every milestone, include one or two real, high-quality HTTPS resources that directly teach that milestone. Prefer stable pages from official documentation, standards organizations, universities, MDN, or freeCodeCamp. Do not invent domains or URLs. Use a specific page URL rather than a generic homepage. Return only the requested JSON.",
+    async function requestRoadmap(retry = false) {
+      return getGroq().chat.completions.create({
+        model: process.env.GROQ_MODEL ?? "openai/gpt-oss-20b",
+        temperature: 0.4,
+        messages: [
+          {
+            role: "system",
+            content: `You are an expert curriculum designer. Create practical, sequential learning roadmaps with between 3 and 12 measurable milestones. Never return fewer than 3 milestones. Respect the learner's stated time limit. For every milestone, include one or two real, high-quality HTTPS resources that directly teach that milestone. Prefer stable pages from official documentation, standards organizations, universities, MDN, or freeCodeCamp. Do not invent domains or URLs. Use a specific page URL rather than a generic homepage. Return only the requested JSON.${retry ? " This is a schema-validation retry: double-check that milestones contains at least 3 items and every milestone contains resources." : ""}`,
+          },
+          { role: "user", content: prompt },
+        ],
+        response_format: {
+          type: "json_schema",
+          json_schema: { name: "learning_roadmap", strict: true, schema: roadmapJsonSchema },
         },
-        { role: "user", content: parsedPrompt.data },
-      ],
-      response_format: {
-        type: "json_schema",
-        json_schema: { name: "learning_roadmap", strict: true, schema: roadmapJsonSchema },
-      },
-    });
+      });
+    }
+
+    let completion;
+    try { completion = await requestRoadmap(); }
+    catch { completion = await requestRoadmap(true); }
 
     const content = completion.choices[0]?.message.content;
     if (!content) return { error: "The AI did not return a roadmap. Please try again." };
@@ -99,7 +106,7 @@ export async function generateRoadmap(
     const result = await db.execute<{ id: string }>(sql`
       with new_roadmap as (
         insert into ai_roadmaps (prompt, title, description, estimated_duration)
-        values (${parsedPrompt.data}, ${roadmap.title}, ${roadmap.description}, ${roadmap.estimatedDuration})
+        values (${prompt}, ${roadmap.title}, ${roadmap.description}, ${roadmap.estimatedDuration})
         returning id
       ), new_milestones as (
         insert into roadmap_milestones (roadmap_id, title, description, duration, resource_links, position)

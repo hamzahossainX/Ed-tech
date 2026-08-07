@@ -9,6 +9,8 @@ The current version does not require an account. This keeps the demo flow short,
 - Generate a structured learning plan from a natural-language prompt
 - Store roadmaps and ordered milestones in Postgres
 - Attach one or two AI-suggested documentation links to each milestone
+- Claim a named certificate after completing every milestone
+- Export the certificate as a client-generated PDF
 - Open a roadmap directly at `/roadmap/[id]`
 - Mark milestones complete with optimistic UI updates
 - Track completion as a percentage
@@ -84,6 +86,13 @@ Clone the repository and install its dependencies:
 git clone https://github.com/hamzahossainX/Ed-tech.git
 cd Ed-tech
 npm install
+```
+
+The certificate exporter depends on `html2canvas` and `jspdf`. They are already
+listed in `package.json`; for a manual installation, run:
+
+```bash
+npm install html2canvas jspdf @radix-ui/react-dialog
 ```
 
 Create the local environment file:

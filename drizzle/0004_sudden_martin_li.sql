@@ -1,0 +1,1 @@
+ALTER TABLE "ai_roadmaps" ADD COLUMN "user_name" text;

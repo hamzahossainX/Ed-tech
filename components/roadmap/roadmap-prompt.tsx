@@ -1,14 +1,30 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useRef, useState } from "react";
 import { useFormStatus } from "react-dom";
 import { ArrowUpRight, Sparkles } from "lucide-react";
 import { generateRoadmap, type GenerateRoadmapState } from "@/app/actions/generate-roadmap";
 
 const initialState: GenerateRoadmapState = {};
+const suggestions = [
+  "Full-Stack Next.js Developer in 3 months",
+  "Cybersecurity & Bug Bounty basics in 8 weeks",
+  "Master Python & Machine Learning in 2 months",
+  "UI/UX Design for beginners in 4 weeks",
+] as const;
 
 export function RoadmapPrompt() {
   const [state, action] = useActionState(generateRoadmap, initialState);
+  const [prompt, setPrompt] = useState("");
+  const promptRef = useRef<HTMLTextAreaElement>(null);
+
+  function selectSuggestion(suggestion: string) {
+    setPrompt(suggestion);
+    requestAnimationFrame(() => {
+      promptRef.current?.focus();
+      promptRef.current?.setSelectionRange(suggestion.length, suggestion.length);
+    });
+  }
 
   return (
     <form action={action} className="relative overflow-hidden rounded-[2rem] bg-[#173f2c] p-6 text-white shadow-[0_24px_80px_rgba(23,63,44,.18)] md:p-9">
@@ -18,11 +34,11 @@ export function RoadmapPrompt() {
         <label htmlFor="roadmap-prompt" className="block text-2xl font-black tracking-tight md:text-3xl">What do you want to become great at?</label>
         <p className="mt-2 max-w-2xl text-sm leading-6 text-white/55">Include your goal, experience level, and available time. LearnX will turn it into a practical path.</p>
         <div className="mt-6 flex flex-col gap-3 rounded-2xl bg-white p-2 sm:flex-row">
-          <textarea id="roadmap-prompt" name="prompt" required minLength={12} maxLength={500} rows={2} placeholder="I want to learn Python in 3 months and can study 8 hours each week..." className="min-h-16 flex-1 resize-none rounded-xl px-4 py-3 text-[15px] leading-6 text-[#17211b] outline-none placeholder:text-black/35" />
+          <textarea ref={promptRef} id="roadmap-prompt" name="prompt" value={prompt} onChange={(event) => setPrompt(event.target.value)} required minLength={12} maxLength={500} rows={2} placeholder="I want to learn Python in 3 months and can study 8 hours each week..." className="min-h-16 flex-1 resize-none rounded-xl px-4 py-3 text-[15px] leading-6 text-[#17211b] outline-none placeholder:text-black/35 focus:ring-4 focus:ring-[#c8ff65]/35" />
           <SubmitButton />
         </div>
         {state.error && <p role="alert" className="mt-3 rounded-xl bg-red-400/15 px-4 py-3 text-sm text-red-100">{state.error}</p>}
-        <div className="mt-4 flex flex-wrap gap-2 text-xs text-white/45"><span>Try:</span>{["Data analysis in 8 weeks", "UX design from scratch", "Become job-ready in React"].map((idea) => <span key={idea} className="rounded-full border border-white/10 px-3 py-1">{idea}</span>)}</div>
+        <div className="mt-4 flex flex-wrap items-center gap-2 text-xs text-white/45"><span className="mr-1 font-semibold text-white/55">Try:</span>{suggestions.map((suggestion) => <button key={suggestion} type="button" onClick={() => selectSuggestion(suggestion)} aria-label={`Use prompt: ${suggestion}`} className="rounded-full border border-white/15 px-3 py-1.5 text-left text-white/65 transition hover:-translate-y-0.5 hover:border-[#c8ff65]/50 hover:bg-[#c8ff65]/10 hover:text-[#c8ff65] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#c8ff65]">{suggestion}</button>)}</div>
       </div>
     </form>
   );

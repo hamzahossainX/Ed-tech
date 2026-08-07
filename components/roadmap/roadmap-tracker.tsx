@@ -4,12 +4,13 @@ import { useOptimistic, useTransition } from "react";
 import { motion } from "framer-motion";
 import { BadgeCheck, BookOpen, Check, Clock3, Circle, ExternalLink } from "lucide-react";
 import { toggleMilestone } from "@/app/actions/toggle-milestone";
+import { ClaimCertificateDialog } from "@/components/certificate/claim-certificate-dialog";
 import type { ResourceLink } from "@/db/schema";
 import { cn } from "@/lib/utils";
 
 export type TrackerMilestone = { id: string; title: string; description: string; duration: string; resourceLinks: ResourceLink[]; position: number; isCompleted: boolean };
 
-type Props = { roadmap: { title: string; description: string; estimatedDuration: string; milestones: TrackerMilestone[] } };
+type Props = { roadmap: { id: string; userName?: string | null; title: string; description: string; estimatedDuration: string; milestones: TrackerMilestone[] } };
 
 export function RoadmapTracker({ roadmap }: Props) {
   const [isPending, startTransition] = useTransition();
@@ -41,6 +42,7 @@ export function RoadmapTracker({ roadmap }: Props) {
             </motion.li>
           ))}
         </ol>
+        <ClaimCertificateDialog roadmapId={roadmap.id} isComplete={progress === 100 && milestones.length > 0} claimedName={roadmap.userName} />
       </div>
     </section>
   );

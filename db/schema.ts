@@ -76,6 +76,7 @@ export const resumes = pgTable("resumes", {
 
 export const aiRoadmaps = pgTable("ai_roadmaps", {
   id: uuid("id").defaultRandom().primaryKey(),
+  userName: text("user_name"),
   prompt: text("prompt").notNull(),
   title: text("title").notNull(),
   description: text("description").notNull(),
