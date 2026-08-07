@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { ArrowDown, BadgeCheck, BrainCircuit, Hammer, Route, Sparkles } from "lucide-react";
+import { ArrowDown, BadgeCheck, BrainCircuit, Route, Sparkles } from "lucide-react";
 import { RoadmapPrompt } from "@/components/roadmap/roadmap-prompt";
 
 export function LandingExperience() {
@@ -15,11 +15,6 @@ export function LandingExperience() {
 
   return (
     <main className="min-h-screen overflow-hidden">
-      <nav className="mx-auto flex max-w-7xl items-center justify-between px-4 py-5 pr-16 sm:px-6 sm:py-7 sm:pr-20 lg:px-10 lg:pr-24">
-        <div className="flex items-center gap-2 text-lg font-black tracking-tight"><span className="grid size-9 place-items-center rounded-full bg-[#173f2c] text-[#c8ff65]"><Hammer size={18} /></span>LearnX</div>
-        <span className="hidden rounded-full border border-[#173f2c]/15 bg-white/60 px-4 py-2 text-xs font-bold text-[#173f2c] backdrop-blur dark:border-white/10 dark:bg-white/8 dark:text-white/75 sm:inline-flex">AI-powered learning</span>
-      </nav>
-
       <section className="relative mx-auto flex min-h-[72vh] max-w-7xl flex-col items-center justify-center px-4 pb-14 pt-8 text-center sm:min-h-[78vh] sm:px-6 sm:pb-20 sm:pt-12 lg:px-10">
         <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="mb-5 inline-flex items-center gap-2 rounded-full border border-[#173f2c]/15 bg-white/70 px-3 py-2 text-[10px] font-black uppercase tracking-[.14em] text-[#3c7156] backdrop-blur dark:border-white/10 dark:bg-white/8 dark:text-[#c8ff65] sm:mb-7 sm:px-4 sm:text-xs sm:tracking-[.2em]"><Sparkles size={15} /> One goal. Your perfect path.</motion.div>
         <motion.h1 initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: .08 }} className="max-w-5xl text-4xl font-black leading-[.95] tracking-[-.05em] sm:text-6xl md:text-7xl lg:text-[7.5rem] lg:leading-[.9] lg:tracking-[-.065em]">Turn ambition into<br /><span className="text-[#3c7156] dark:text-[#a9e950]">a clear roadmap.</span></motion.h1>
