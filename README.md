@@ -76,6 +76,8 @@ Deleting a roadmap deletes its milestones through the database foreign key. The 
 - npm
 - A Neon Postgres database
 - A Groq API key
+- A GitHub OAuth App
+- `bcryptjs`, `react-hook-form`, and `@hookform/resolvers` for credentials authentication
 - A Cloudinary account only if you plan to use the upload action
 
 ## Local setup
@@ -107,6 +109,24 @@ Set the required variables in `.env.local`:
 DATABASE_URL=postgresql://user:password@host/database?sslmode=require
 GROQ_API_KEY=your_groq_api_key
 GROQ_MODEL=openai/gpt-oss-20b
+GITHUB_ID=your_github_oauth_client_id
+GITHUB_SECRET=your_github_oauth_client_secret
+AUTH_SECRET=generate_with_npx_auth_secret
+```
+
+Create the secret with `npx auth secret`. In your GitHub OAuth App, set the
+local homepage URL to `http://localhost:3000` (or the port printed by Next.js)
+and the authorization callback URL to
+`http://localhost:3000/api/auth/callback/github`. Create a separate OAuth App
+for production with `https://your-domain.com/api/auth/callback/github`.
+
+Email/password accounts use bcrypt hashes with a cost factor of 12. Passwords
+must be 8–72 characters and contain an uppercase letter, number, and special
+character. Install the credentials dependencies with:
+
+```bash
+npm install bcryptjs zod react-hook-form @hookform/resolvers
+npm install --save-dev @types/bcryptjs
 ```
 
 Apply the committed migrations and start the development server:
@@ -125,6 +145,9 @@ Open [http://localhost:3000](http://localhost:3000).
 | `DATABASE_URL` | Yes | Neon database connection and Drizzle migrations |
 | `GROQ_API_KEY` | Yes | Roadmap generation |
 | `GROQ_MODEL` | No | Groq model override; defaults to `openai/gpt-oss-20b` |
+| `GITHUB_ID` | Yes for sign-in | GitHub OAuth App client ID |
+| `GITHUB_SECRET` | Yes for sign-in | GitHub OAuth App client secret |
+| `AUTH_SECRET` | Yes | Encrypts and signs Auth.js cookies and tokens |
 | `CLOUDINARY_CLOUD_NAME` | For uploads | Cloudinary account identifier |
 | `CLOUDINARY_API_KEY` | For uploads | Signed upload generation |
 | `CLOUDINARY_API_SECRET` | For uploads | Server-side upload signing |
