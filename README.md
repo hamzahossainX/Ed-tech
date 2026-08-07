@@ -1,32 +1,185 @@
 # LearnX
 
-LearnX turns a plain-language learning goal into an AI-generated, trackable roadmap. It runs on Next.js 15, Groq, Neon Postgres, and Drizzle ORM, with no authentication required for the hackathon flow.
+LearnX creates a personal learning roadmap from a short goal such as "Learn Python in three months." Groq returns a structured plan, the application stores it in Neon Postgres, and the learner tracks each milestone from a shareable roadmap page.
 
-## Run locally
+The current version does not require an account. This keeps the demo flow short, but it also means that anyone with a roadmap URL can view and update that roadmap. See [Security model](#security-model) before using the project with private data.
 
-1. Copy `.env.example` to `.env.local` and fill in `DATABASE_URL` and `GROQ_API_KEY`.
-2. Run `npm install`.
-3. Run `npm run db:migrate`.
-4. Run `npm run dev` and open `http://localhost:3000`.
+## Features
+
+- Generate a structured learning plan from a natural-language prompt
+- Store roadmaps and ordered milestones in Postgres
+- Open a roadmap directly at `/roadmap/[id]`
+- Mark milestones complete with optimistic UI updates
+- Track completion as a percentage
+- Run the same application locally or on Vercel
+
+## Technology
+
+| Area | Choice |
+| --- | --- |
+| Application | Next.js 15 App Router, React 19, TypeScript |
+| Backend | Next.js Server Actions |
+| Styling | Tailwind CSS 4, Shadcn UI conventions |
+| Animation | Framer Motion |
+| Database | Neon serverless Postgres |
+| ORM and migrations | Drizzle ORM, Drizzle Kit |
+| AI | Groq SDK with strict JSON Schema output |
+| Validation | Zod |
+| Deployment | Vercel |
+
+## How it works
+
+1. The landing page reveals the roadmap prompt form.
+2. `generateRoadmap` validates the prompt and requests a strict JSON response from Groq.
+3. One SQL statement inserts the roadmap and its ordered milestones. This prevents a partially saved roadmap.
+4. The Server Action redirects to `/roadmap/{id}`.
+5. The dynamic route reads the roadmap and milestones from Neon.
+6. Checkbox changes use an optimistic client update while `toggleMilestone` writes the new state to Postgres.
+
+## Project structure
+
+```text
+app/
+├── actions/
+│   ├── generate-roadmap.ts       # Groq request and atomic database insert
+│   └── toggle-milestone.ts       # Milestone completion mutation
+├── roadmap/[id]/page.tsx         # Public roadmap page
+├── globals.css
+├── layout.tsx
+└── page.tsx                      # Landing page
+components/
+├── landing/                      # Landing-page interaction
+├── roadmap/                      # Prompt and tracker components
+└── ui/                           # Shared Shadcn-style primitives
+db/
+├── index.ts                      # Neon and Drizzle client
+└── schema.ts                     # Tables, types, and relations
+drizzle/                          # Versioned SQL migrations and snapshots
+lib/                              # Groq, Cloudinary, and shared utilities
+```
+
+## Database model
+
+The roadmap flow uses two tables:
+
+- `ai_roadmaps` stores the prompt, generated title, description, and estimated duration.
+- `roadmap_milestones` stores ordered steps, completion state, and completion time.
+
+Deleting a roadmap deletes its milestones through the database foreign key. The roadmap has no user foreign key because the application does not currently have authentication.
+
+## Prerequisites
+
+- Node.js 20.9 or newer
+- npm
+- A Neon Postgres database
+- A Groq API key
+- A Cloudinary account only if you plan to use the upload action
+
+## Local setup
+
+Clone the repository and install its dependencies:
+
+```bash
+git clone https://github.com/hamzahossainX/Ed-tech.git
+cd Ed-tech
+npm install
+```
+
+Create the local environment file:
+
+```bash
+cp .env.example .env.local
+```
+
+Set the required variables in `.env.local`:
+
+```dotenv
+DATABASE_URL=postgresql://user:password@host/database?sslmode=require
+GROQ_API_KEY=your_groq_api_key
+GROQ_MODEL=openai/gpt-oss-20b
+```
+
+Apply the committed migrations and start the development server:
+
+```bash
+npm run db:migrate
+npm run dev
+```
+
+Open [http://localhost:3000](http://localhost:3000).
+
+## Environment variables
+
+| Variable | Required | Used for |
+| --- | --- | --- |
+| `DATABASE_URL` | Yes | Neon database connection and Drizzle migrations |
+| `GROQ_API_KEY` | Yes | Roadmap generation |
+| `GROQ_MODEL` | No | Groq model override; defaults to `openai/gpt-oss-20b` |
+| `CLOUDINARY_CLOUD_NAME` | For uploads | Cloudinary account identifier |
+| `CLOUDINARY_API_KEY` | For uploads | Signed upload generation |
+| `CLOUDINARY_API_SECRET` | For uploads | Server-side upload signing |
+
+Never expose database, Groq, or Cloudinary secrets through variables prefixed with `NEXT_PUBLIC_`. Do not commit `.env.local`.
+
+## Commands
+
+| Command | Purpose |
+| --- | --- |
+| `npm run dev` | Start the local Turbopack development server |
+| `npm run build` | Create and validate a production build |
+| `npm run start` | Run the compiled production server |
+| `npm run vercel-build` | Build command used by Vercel |
+| `npm run db:generate` | Generate a migration after a schema change |
+| `npm run db:migrate` | Apply pending migrations |
+| `npm run db:studio` | Open Drizzle Studio |
 
 ## Deploy to Vercel
 
-1. Push this repository to GitHub, GitLab, or Bitbucket and import it into Vercel.
-2. Add these variables under **Project Settings → Environment Variables**:
-   - `DATABASE_URL`
-   - `GROQ_API_KEY`
-   - `GROQ_MODEL` (recommended: `openai/gpt-oss-20b`)
-   - `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, and `CLOUDINARY_API_SECRET` only if uploads are used
-3. Deploy. Vercel uses `npm run vercel-build`; the existing Neon migrations are already applied.
+1. Import the GitHub repository into Vercel.
+2. Add `DATABASE_URL`, `GROQ_API_KEY`, and `GROQ_MODEL` under Project Settings, then Environment Variables.
+3. Add the Cloudinary variables only if uploads are part of the deployment.
+4. Deploy the project.
 
-Do not commit or upload `.env.local`. Vercel production secrets must be configured in its dashboard.
+Vercel reads [vercel.json](./vercel.json) and runs `npm run vercel-build`. The Neon schema must already contain the committed migrations. Apply them from a trusted local or CI environment before deploying code that depends on a new schema.
 
-## Architecture
+## Schema changes
 
-- `app/page.tsx` — frictionless AI roadmap generator
-- `app/roadmap/[id]` — shareable roadmap tracker
-- `app/actions` — Groq generation and milestone Server Actions
-- `components/landing` and `components/roadmap` — interactive UI
-- `db` and `drizzle` — Neon connection, schema, and migrations
+Update `db/schema.ts`, generate a migration, inspect the SQL, and apply it:
 
-Roadmaps are public by UUID. Anyone with the URL can view and update milestones; add authentication or an edit token before storing private data.
+```bash
+npm run db:generate
+npm run db:migrate
+```
+
+Commit the schema file, generated SQL, and Drizzle metadata together. Do not edit a migration after it has been applied to a shared database.
+
+## Security model
+
+Roadmaps are public by UUID. There is no separate edit credential, so possession of the URL grants read and update access. This is deliberate for the hackathon demo.
+
+Before using LearnX for private or multi-user data:
+
+- add authentication or a separate hashed edit token;
+- enforce authorization inside every mutation;
+- add rate limiting to roadmap generation;
+- validate upload type and size if Cloudinary uploads are enabled;
+- rotate any credential that has been copied into logs, chat, or source control.
+
+## Verification
+
+Run the production build before opening a pull request:
+
+```bash
+npm run build
+```
+
+For roadmap changes, test this sequence locally:
+
+1. Submit a learning goal from `/`.
+2. Confirm the response redirects to `/roadmap/{id}`.
+3. Refresh the roadmap and check that milestones remain ordered.
+4. Toggle a milestone, refresh again, and confirm the completion state persisted.
+
+## License
+
+No license has been added yet. Until one is provided, the repository remains all rights reserved by default.
