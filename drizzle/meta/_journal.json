@@ -36,6 +36,27 @@
       "when": 1786099661007,
       "tag": "0004_sudden_martin_li",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1786118815771,
+      "tag": "0005_burly_epoch",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1786119685103,
+      "tag": "0006_chief_kronos",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1786120560750,
+      "tag": "0007_wide_phantom_reporter",
+      "breakpoints": true
     }
   ]
 }
