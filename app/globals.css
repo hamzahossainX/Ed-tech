@@ -3,14 +3,14 @@
 
 :root {
   --ink: #17211b;
-  --paper: #f5f3ec;
+  --paper: #f8f9fa;
   --lime: #c8ff65;
   --forest: #173f2c;
 }
 
 .dark {
   --ink: #f0f7f2;
-  --paper: #080d0a;
+  --paper: #0a0a0a;
   --forest: #c8ff65;
 }
 
@@ -21,16 +21,16 @@ body {
   color: var(--ink);
   background:
     radial-gradient(circle at 15% 5%, rgba(200, 255, 101, .22), transparent 28rem),
-    var(--paper);
+    #f8f9fa;
   font-family: Arial, Helvetica, sans-serif;
   transition: color .2s ease, background-color .2s ease;
 }
 
 .dark body {
   background:
-    radial-gradient(circle at 15% 5%, rgba(88, 135, 66, .2), transparent 30rem),
-    radial-gradient(circle at 85% 30%, rgba(23, 63, 44, .22), transparent 34rem),
-    var(--paper);
+    radial-gradient(circle at 15% 5%, rgba(81, 122, 60, .13), transparent 30rem),
+    radial-gradient(circle at 85% 30%, rgba(23, 63, 44, .12), transparent 34rem),
+    #0a0a0a;
 }
 
 ::selection { background: var(--lime); color: var(--ink); }
