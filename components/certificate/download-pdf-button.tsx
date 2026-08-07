@@ -92,19 +92,20 @@ export function DownloadPDFButton({
   }
 
   return (
-    <div className="flex flex-col items-end gap-2">
+    <div className="flex min-w-0 flex-col items-end gap-2">
       <button
         type="button"
+        aria-label={isGenerating ? "Creating certificate PDF" : "Download certificate PDF"}
         onClick={handleDownload}
         disabled={isGenerating}
-        className="flex items-center gap-2 rounded-full bg-[#173f2c] px-6 py-3 font-black text-white transition hover:-translate-y-0.5 disabled:cursor-wait disabled:opacity-60"
+        className="flex min-h-11 items-center justify-center gap-2 rounded-full bg-[#173f2c] px-4 py-2 text-sm font-black text-white transition hover:-translate-y-0.5 disabled:cursor-wait disabled:opacity-60 sm:px-6 sm:py-3 sm:text-base"
       >
         {isGenerating ? (
           <LoaderCircle className="animate-spin" size={17} />
         ) : (
           <Download size={17} />
         )}
-        {isGenerating ? "Creating PDF..." : "Download PDF"}
+        <span className="hidden min-[390px]:inline">{isGenerating ? "Creating PDF..." : "Download PDF"}</span>
       </button>
       {error && (
         <p role="alert" className="max-w-sm text-right text-sm text-red-700">
