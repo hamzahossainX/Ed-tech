@@ -8,6 +8,7 @@ The current version does not require an account. This keeps the demo flow short,
 
 - Generate a structured learning plan from a natural-language prompt
 - Store roadmaps and ordered milestones in Postgres
+- Attach one or two AI-suggested documentation links to each milestone
 - Open a roadmap directly at `/roadmap/[id]`
 - Mark milestones complete with optimistic UI updates
 - Track completion as a percentage
@@ -63,7 +64,7 @@ lib/                              # Groq, Cloudinary, and shared utilities
 The roadmap flow uses two tables:
 
 - `ai_roadmaps` stores the prompt, generated title, description, and estimated duration.
-- `roadmap_milestones` stores ordered steps, completion state, and completion time.
+- `roadmap_milestones` stores ordered steps, resource links, completion state, and completion time. Resource links are typed JSONB objects with a title and HTTPS URL.
 
 Deleting a roadmap deletes its milestones through the database foreign key. The roadmap has no user foreign key because the application does not currently have authentication.
 
@@ -178,7 +179,8 @@ For roadmap changes, test this sequence locally:
 1. Submit a learning goal from `/`.
 2. Confirm the response redirects to `/roadmap/{id}`.
 3. Refresh the roadmap and check that milestones remain ordered.
-4. Toggle a milestone, refresh again, and confirm the completion state persisted.
+4. Open a resource and confirm it loads in a new tab.
+5. Toggle a milestone, refresh again, and confirm the completion state persisted.
 
 ## License
 

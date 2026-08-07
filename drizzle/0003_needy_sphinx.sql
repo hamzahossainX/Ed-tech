@@ -1,0 +1,1 @@
+ALTER TABLE "roadmap_milestones" ADD COLUMN "resource_links" jsonb DEFAULT '[]'::jsonb NOT NULL;

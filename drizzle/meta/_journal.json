@@ -22,6 +22,13 @@
       "when": 1786098333394,
       "tag": "0002_purple_shadow_king",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1786099113480,
+      "tag": "0003_needy_sphinx",
+      "breakpoints": true
     }
   ]
 }

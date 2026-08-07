@@ -2,11 +2,12 @@
 
 import { useOptimistic, useTransition } from "react";
 import { motion } from "framer-motion";
-import { BadgeCheck, Check, Clock3, Circle } from "lucide-react";
+import { BadgeCheck, BookOpen, Check, Clock3, Circle, ExternalLink } from "lucide-react";
 import { toggleMilestone } from "@/app/actions/toggle-milestone";
+import type { ResourceLink } from "@/db/schema";
 import { cn } from "@/lib/utils";
 
-export type TrackerMilestone = { id: string; title: string; description: string; duration: string; position: number; isCompleted: boolean };
+export type TrackerMilestone = { id: string; title: string; description: string; duration: string; resourceLinks: ResourceLink[]; position: number; isCompleted: boolean };
 
 type Props = { roadmap: { title: string; description: string; estimatedDuration: string; milestones: TrackerMilestone[] } };
 
@@ -36,7 +37,7 @@ export function RoadmapTracker({ roadmap }: Props) {
           {milestones.map((item, index) => (
             <motion.li initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: index * .05 }} key={item.id} className={cn("relative flex gap-5 rounded-2xl border p-5 transition", item.isCompleted ? "border-[#3c7156]/15 bg-[#f5faee]" : "border-black/8 bg-white hover:border-black/15")}>
               <button type="button" disabled={isPending} onClick={() => handleToggle(item)} aria-label={`${item.isCompleted ? "Mark incomplete" : "Complete"} ${item.title}`} className={cn("relative z-10 grid size-11 shrink-0 place-items-center rounded-full border-2 transition", item.isCompleted ? "border-[#3c7156] bg-[#3c7156] text-white" : "border-black/15 bg-white text-black/25 hover:border-[#3c7156]")}>{item.isCompleted ? <Check size={19} strokeWidth={3} /> : <Circle size={13} fill="currentColor" />}</button>
-              <div className="min-w-0 flex-1"><div className="flex flex-wrap items-start justify-between gap-2"><div><p className="text-[10px] font-black uppercase tracking-[.18em] text-[#3c7156]">Milestone {item.position}</p><h3 className={cn("mt-1 text-lg font-black", item.isCompleted && "text-black/45 line-through")}>{item.title}</h3></div><span className="rounded-full bg-black/5 px-3 py-1 text-xs font-semibold text-black/45">{item.duration}</span></div><p className="mt-2 text-sm leading-6 text-black/50">{item.description}</p></div>
+              <div className="min-w-0 flex-1"><div className="flex flex-wrap items-start justify-between gap-2"><div><p className="text-[10px] font-black uppercase tracking-[.18em] text-[#3c7156]">Milestone {item.position}</p><h3 className={cn("mt-1 text-lg font-black", item.isCompleted && "text-black/45 line-through")}>{item.title}</h3></div><span className="rounded-full bg-black/5 px-3 py-1 text-xs font-semibold text-black/45">{item.duration}</span></div><p className="mt-2 text-sm leading-6 text-black/50">{item.description}</p>{item.resourceLinks.length > 0 && <div className="mt-4 border-t border-black/8 pt-4"><p className="mb-2 flex items-center gap-2 text-[10px] font-black uppercase tracking-[.16em] text-black/40"><BookOpen size={13} /> Resources</p><div className="flex flex-wrap gap-2">{item.resourceLinks.map((resource) => <a key={resource.url} href={resource.url} target="_blank" rel="noopener noreferrer" className="group inline-flex items-center gap-2 rounded-xl border border-[#3c7156]/15 bg-white px-3 py-2 text-xs font-bold text-[#28583f] transition hover:-translate-y-0.5 hover:border-[#3c7156]/35 hover:shadow-sm"><span className="max-w-52 truncate">{resource.title}</span><ExternalLink size={13} className="opacity-45 transition group-hover:opacity-100" /></a>)}</div></div>}</div>
             </motion.li>
           ))}
         </ol>

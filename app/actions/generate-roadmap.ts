@@ -17,6 +17,10 @@ const roadmapSchema = z.object({
     title: z.string().min(3).max(120),
     description: z.string().min(10).max(500),
     duration: z.string().min(2).max(50),
+    resources: z.array(z.object({
+      title: z.string().min(2).max(100),
+      url: z.url().refine((url) => url.startsWith("https://"), "Resource links must use HTTPS"),
+    })).min(1).max(2),
   })).min(3).max(12),
 });
 
@@ -40,8 +44,22 @@ const roadmapJsonSchema = {
           title: { type: "string" },
           description: { type: "string" },
           duration: { type: "string" },
+          resources: {
+            type: "array",
+            minItems: 1,
+            maxItems: 2,
+            items: {
+              type: "object",
+              additionalProperties: false,
+              properties: {
+                title: { type: "string" },
+                url: { type: "string" },
+              },
+              required: ["title", "url"],
+            },
+          },
         },
-        required: ["title", "description", "duration"],
+        required: ["title", "description", "duration", "resources"],
       },
     },
   },
@@ -63,7 +81,7 @@ export async function generateRoadmap(
       messages: [
         {
           role: "system",
-          content: "You are an expert curriculum designer. Create practical, sequential learning roadmaps with measurable milestones. Respect the learner's stated time limit. Return only the requested JSON.",
+          content: "You are an expert curriculum designer. Create practical, sequential learning roadmaps with measurable milestones. Respect the learner's stated time limit. For every milestone, include one or two real, high-quality HTTPS resources that directly teach that milestone. Prefer stable pages from official documentation, standards organizations, universities, MDN, or freeCodeCamp. Do not invent domains or URLs. Use a specific page URL rather than a generic homepage. Return only the requested JSON.",
         },
         { role: "user", content: parsedPrompt.data },
       ],
@@ -84,12 +102,13 @@ export async function generateRoadmap(
         values (${parsedPrompt.data}, ${roadmap.title}, ${roadmap.description}, ${roadmap.estimatedDuration})
         returning id
       ), new_milestones as (
-        insert into roadmap_milestones (roadmap_id, title, description, duration, position)
+        insert into roadmap_milestones (roadmap_id, title, description, duration, resource_links, position)
         select
           new_roadmap.id,
           item.value->>'title',
           item.value->>'description',
           item.value->>'duration',
+          item.value->'resources',
           item.ordinality::integer
         from new_roadmap
         cross join lateral jsonb_array_elements(${milestonesJson}::jsonb)

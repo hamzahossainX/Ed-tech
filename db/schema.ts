@@ -22,6 +22,11 @@ export type ResumeSkill = {
   verifiedAt: string;
 };
 
+export type ResourceLink = {
+  title: string;
+  url: string;
+};
+
 export const users = pgTable("users", {
   id: uuid("id").defaultRandom().primaryKey(),
   clerkId: text("clerk_id").notNull().unique(),
@@ -85,6 +90,7 @@ export const roadmapMilestones = pgTable("roadmap_milestones", {
   title: text("title").notNull(),
   description: text("description").notNull(),
   duration: text("duration").notNull(),
+  resourceLinks: jsonb("resource_links").$type<ResourceLink[]>().notNull().default(sql`'[]'::jsonb`),
   position: integer("position").notNull(),
   isCompleted: boolean("is_completed").notNull().default(false),
   completedAt: timestamp("completed_at", { withTimezone: true }),
