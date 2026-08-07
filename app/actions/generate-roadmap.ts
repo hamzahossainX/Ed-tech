@@ -6,6 +6,7 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { db } from "@/db";
 import { getGroq } from "@/lib/groq";
+import { getOrCreateGuestId } from "@/lib/guest";
 
 const promptSchema = z.string().trim().min(12, "Tell us a little more about your goal.").max(500);
 
@@ -24,7 +25,7 @@ const roadmapSchema = z.object({
   })).min(3).max(12),
 });
 
-export type GenerateRoadmapState = { error?: string };
+export type GenerateRoadmapState = { error?: string; limitReachedAt?: number };
 
 const roadmapJsonSchema = {
   type: "object",
@@ -73,6 +74,24 @@ export async function generateRoadmap(
   const parsedPrompt = promptSchema.safeParse(formData.get("prompt"));
   if (!parsedPrompt.success) return { error: parsedPrompt.error.issues[0].message };
   const prompt = parsedPrompt.data;
+  const guestId = await getOrCreateGuestId();
+
+  let reservation;
+  try {
+    reservation = await db.execute<{ generation_count: number }>(sql`
+      insert into guest_usage (guest_id, generation_count)
+      values (${guestId}, 1)
+      on conflict (guest_id) do update
+        set generation_count = guest_usage.generation_count + 1
+        where guest_usage.generation_count < 3
+      returning generation_count
+    `);
+  } catch (error) {
+    console.error("Could not check guest generation allowance", error);
+    return { error: "Could not verify your demo allowance. Please try again." };
+  }
+
+  if (!reservation.rows[0]) return { error: "LIMIT_REACHED", limitReachedAt: Date.now() };
 
   let createdRoadmapId: string;
   try {
@@ -99,7 +118,7 @@ export async function generateRoadmap(
     catch { completion = await requestRoadmap(true); }
 
     const content = completion.choices[0]?.message.content;
-    if (!content) return { error: "The AI did not return a roadmap. Please try again." };
+    if (!content) throw new Error("The AI did not return a roadmap.");
     const roadmap = roadmapSchema.parse(JSON.parse(content));
     const milestonesJson = JSON.stringify(roadmap.milestones);
 
@@ -124,9 +143,14 @@ export async function generateRoadmap(
       select id from new_roadmap
     `);
     const roadmapId = result.rows[0]?.id;
-    if (!roadmapId) return { error: "Could not save the generated roadmap." };
+    if (!roadmapId) throw new Error("Could not save the generated roadmap.");
     createdRoadmapId = roadmapId;
   } catch (error) {
+    await db.execute(sql`
+      update guest_usage
+      set generation_count = greatest(generation_count - 1, 0)
+      where guest_id = ${guestId}
+    `).catch((rollbackError) => console.error("Could not release guest generation reservation", rollbackError));
     console.error("Roadmap generation failed", error);
     return { error: "Roadmap generation failed. Check your AI configuration and try again." };
   }
