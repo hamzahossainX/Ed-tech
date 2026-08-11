@@ -3,10 +3,10 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "node --network-family-autoselection-attempt-timeout=5000 node_modules/next/dist/bin/next dev --turbopack",
+    "dev": "node --network-family-autoselection-attempt-timeout=5000 node_modules/next/dist/bin/next dev --turbopack --hostname 127.0.0.1 --port 3001",
     "build": "next build",
     "vercel-build": "next build",
-    "start": "next start",
+    "start": "next start --hostname 127.0.0.1 --port 3001",
     "lint": "next lint",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",

@@ -1,10 +1,12 @@
 "use server";
 
-import { sql } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
+import { auth } from "@/auth";
 import { db } from "@/db";
+import { users } from "@/db/schema";
 import { getGroq } from "@/lib/groq";
 import { getOrCreateGuestId } from "@/lib/guest";
 
@@ -25,46 +27,71 @@ const roadmapSchema = z.object({
   })).min(3).max(12),
 });
 
-export type GenerateRoadmapState = { error?: string; limitReachedAt?: number };
+const aiResponseSchema = z.object({
+  isValidTopic: z.boolean(),
+  message: z.string().max(300),
+  roadmap: roadmapSchema.nullable(),
+});
+
+export type GenerateRoadmapState = {
+  error?: string;
+  warning?: string;
+  limitReachedAt?: number;
+};
+
+const EDUCATIONAL_REFUSAL_MESSAGE =
+  "I am an educational AI. Please enter a valid skill, subject, or career path you want to learn.";
+const DAILY_GENERATION_LIMIT = 3;
 
 const roadmapJsonSchema = {
   type: "object",
   additionalProperties: false,
   properties: {
-    title: { type: "string" },
-    description: { type: "string" },
-    estimatedDuration: { type: "string" },
-    milestones: {
-      type: "array",
-      minItems: 3,
-      maxItems: 12,
-      items: {
+    isValidTopic: { type: "boolean" },
+    message: { type: "string" },
+    roadmap: {
+      anyOf: [{
         type: "object",
         additionalProperties: false,
         properties: {
           title: { type: "string" },
           description: { type: "string" },
-          duration: { type: "string" },
-          resources: {
+          estimatedDuration: { type: "string" },
+          milestones: {
             type: "array",
-            minItems: 1,
-            maxItems: 2,
+            minItems: 3,
+            maxItems: 12,
             items: {
               type: "object",
               additionalProperties: false,
               properties: {
                 title: { type: "string" },
-                url: { type: "string" },
+                description: { type: "string" },
+                duration: { type: "string" },
+                resources: {
+                  type: "array",
+                  minItems: 1,
+                  maxItems: 2,
+                  items: {
+                    type: "object",
+                    additionalProperties: false,
+                    properties: {
+                      title: { type: "string" },
+                      url: { type: "string" },
+                    },
+                    required: ["title", "url"],
+                  },
+                },
               },
-              required: ["title", "url"],
+              required: ["title", "description", "duration", "resources"],
             },
           },
         },
-        required: ["title", "description", "duration", "resources"],
-      },
+        required: ["title", "description", "estimatedDuration", "milestones"],
+      }, { type: "null" }],
     },
   },
-  required: ["title", "description", "estimatedDuration", "milestones"],
+  required: ["isValidTopic", "message", "roadmap"],
 } as const;
 
 export async function generateRoadmap(
@@ -74,24 +101,58 @@ export async function generateRoadmap(
   const parsedPrompt = promptSchema.safeParse(formData.get("prompt"));
   if (!parsedPrompt.success) return { error: parsedPrompt.error.issues[0].message };
   const prompt = parsedPrompt.data;
-  const guestId = await getOrCreateGuestId();
 
-  let reservation;
-  try {
-    reservation = await db.execute<{ generation_count: number }>(sql`
-      insert into guest_usage (guest_id, generation_count)
-      values (${guestId}, 1)
-      on conflict (guest_id) do update
-        set generation_count = guest_usage.generation_count + 1
-        where guest_usage.generation_count < 3
-      returning generation_count
-    `);
-  } catch (error) {
-    console.error("Could not check guest generation allowance", error);
-    return { error: "Could not verify your demo allowance. Please try again." };
+  const session = await auth();
+  const signedInUser = session?.user?.email
+    ? await db.query.users.findFirst({
+        where: eq(users.email, session.user.email),
+        columns: { id: true, role: true },
+      })
+    : null;
+  const isAdmin = signedInUser?.role === "admin";
+  const usageId = isAdmin
+    ? null
+    : signedInUser
+      ? `user:${signedInUser.id}`
+      : `guest:${await getOrCreateGuestId()}`;
+
+  if (usageId) {
+    let reservation;
+    try {
+      reservation = await db.execute<{ generation_count: number }>(sql`
+        insert into guest_usage (guest_id, generation_count)
+        values (${usageId}, 1)
+        on conflict (guest_id) do update
+          set
+            generation_count = case
+              when guest_usage.created_at < (date_trunc('day', now() at time zone 'Asia/Dhaka') at time zone 'Asia/Dhaka') then 1
+              else guest_usage.generation_count + 1
+            end,
+            created_at = case
+              when guest_usage.created_at < (date_trunc('day', now() at time zone 'Asia/Dhaka') at time zone 'Asia/Dhaka') then now()
+              else guest_usage.created_at
+            end
+          where
+            guest_usage.created_at < (date_trunc('day', now() at time zone 'Asia/Dhaka') at time zone 'Asia/Dhaka')
+            or guest_usage.generation_count < ${DAILY_GENERATION_LIMIT}
+        returning generation_count
+      `);
+    } catch (error) {
+      console.error("Could not check daily generation allowance", error);
+      return { error: "Could not verify your daily allowance. Please try again." };
+    }
+
+    if (!reservation.rows[0]) return { error: "LIMIT_REACHED", limitReachedAt: Date.now() };
   }
 
-  if (!reservation.rows[0]) return { error: "LIMIT_REACHED", limitReachedAt: Date.now() };
+  async function releaseGuestReservation() {
+    if (!usageId) return;
+    await db.execute(sql`
+      update guest_usage
+      set generation_count = greatest(generation_count - 1, 0)
+      where guest_id = ${usageId}
+    `).catch((rollbackError) => console.error("Could not release guest generation reservation", rollbackError));
+  }
 
   let createdRoadmapId: string;
   try {
@@ -102,7 +163,11 @@ export async function generateRoadmap(
         messages: [
           {
             role: "system",
-            content: `You are an expert curriculum designer. Create practical, sequential learning roadmaps with between 3 and 12 measurable milestones. Never return fewer than 3 milestones. Respect the learner's stated time limit. For every milestone, include one or two real, high-quality HTTPS resources that directly teach that milestone. Prefer stable pages from official documentation, standards organizations, universities, MDN, or freeCodeCamp. Do not invent domains or URLs. Use a specific page URL rather than a generic homepage. Return only the requested JSON.${retry ? " This is a schema-validation retry: double-check that milestones contains at least 3 items and every milestone contains resources." : ""}`,
+            content: `You are an expert educational roadmap generator. First, strictly evaluate the user's input. If the input is NOT related to learning a skill, academic subject, technology, career path, or professional development (e.g., recipes, jokes, general chat, non-educational requests, or inappropriate content), you MUST refuse to generate a roadmap.
+
+For an invalid topic, return only this JSON shape: {"isValidTopic":false,"message":"${EDUCATIONAL_REFUSAL_MESSAGE}","roadmap":null}. Do not answer the request, provide advice, or create roadmap content.
+
+For a valid educational topic, return {"isValidTopic":true,"message":"","roadmap":{...}}. Create a practical, sequential roadmap with 3 to 12 measurable milestones and respect the learner's stated time limit. Every milestone must include one or two real, high-quality HTTPS resources that directly teach it. Prefer stable pages from official documentation, standards organizations, universities, MDN, or freeCodeCamp. Do not invent domains or URLs. Use specific page URLs rather than generic homepages. Return only JSON matching the requested schema.${retry ? " This is a schema-validation retry: re-evaluate the topic and ensure the response envelope and all roadmap fields match the schema." : ""}`,
           },
           { role: "user", content: prompt },
         ],
@@ -119,7 +184,15 @@ export async function generateRoadmap(
 
     const content = completion.choices[0]?.message.content;
     if (!content) throw new Error("The AI did not return a roadmap.");
-    const roadmap = roadmapSchema.parse(JSON.parse(content));
+    const aiResponse = aiResponseSchema.parse(JSON.parse(content));
+    if (!aiResponse.isValidTopic || !aiResponse.roadmap) {
+      await releaseGuestReservation();
+      return {
+        warning: aiResponse.message.trim() || EDUCATIONAL_REFUSAL_MESSAGE,
+      };
+    }
+
+    const roadmap = aiResponse.roadmap;
     const milestonesJson = JSON.stringify(roadmap.milestones);
 
     const result = await db.execute<{ id: string }>(sql`
@@ -146,11 +219,7 @@ export async function generateRoadmap(
     if (!roadmapId) throw new Error("Could not save the generated roadmap.");
     createdRoadmapId = roadmapId;
   } catch (error) {
-    await db.execute(sql`
-      update guest_usage
-      set generation_count = greatest(generation_count - 1, 0)
-      where guest_id = ${guestId}
-    `).catch((rollbackError) => console.error("Could not release guest generation reservation", rollbackError));
+    await releaseGuestReservation();
     console.error("Roadmap generation failed", error);
     return { error: "Roadmap generation failed. Check your AI configuration and try again." };
   }
