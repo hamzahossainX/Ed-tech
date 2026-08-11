@@ -1,0 +1,1 @@
+ALTER TABLE "roadmap_milestones" ADD COLUMN "exhaustive_deep_dive" text;

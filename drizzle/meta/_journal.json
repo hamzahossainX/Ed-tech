@@ -57,6 +57,20 @@
       "when": 1786120560750,
       "tag": "0007_wide_phantom_reporter",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1786427575150,
+      "tag": "0008_rapid_secret_warriors",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1786428135909,
+      "tag": "0009_glamorous_skin",
+      "breakpoints": true
     }
   ]
 }
