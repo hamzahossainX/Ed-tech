@@ -34,3 +34,8 @@ body {
 }
 
 ::selection { background: var(--lime); color: var(--ink); }
+
+@keyframes sheet-in-right { from { transform: translateX(100%); } to { transform: translateX(0); } }
+@keyframes sheet-out-right { from { transform: translateX(0); } to { transform: translateX(100%); } }
+[data-slot="sheet-content"][data-state="open"] { animation: sheet-in-right .32s cubic-bezier(.22, 1, .36, 1); }
+[data-slot="sheet-content"][data-state="closed"] { animation: sheet-out-right .22s ease-in; }
