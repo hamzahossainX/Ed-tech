@@ -10,7 +10,7 @@ type DownloadPDFButtonProps = {
 
 export function DownloadPDFButton({
   targetId,
-  fileName = "SkillForge-Certificate.pdf",
+  fileName = "LearnX-Certificate.pdf",
 }: DownloadPDFButtonProps) {
   const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
