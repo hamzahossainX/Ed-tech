@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@plugin "@tailwindcss/typography";
 @custom-variant dark (&:where(.dark, .dark *));
 
 :root {
@@ -35,7 +36,8 @@ body {
 
 ::selection { background: var(--lime); color: var(--ink); }
 
-@keyframes sheet-in-right { from { transform: translateX(100%); } to { transform: translateX(0); } }
-@keyframes sheet-out-right { from { transform: translateX(0); } to { transform: translateX(100%); } }
-[data-slot="sheet-content"][data-state="open"] { animation: sheet-in-right .32s cubic-bezier(.22, 1, .36, 1); }
-[data-slot="sheet-content"][data-state="closed"] { animation: sheet-out-right .22s ease-in; }
+.focus-scrollbar { scrollbar-width: thin; scrollbar-color: rgba(198, 248, 94, .35) transparent; }
+.focus-scrollbar::-webkit-scrollbar { width: 6px; }
+.focus-scrollbar::-webkit-scrollbar-track { background: transparent; }
+.focus-scrollbar::-webkit-scrollbar-thumb { border-radius: 999px; background: rgba(198, 248, 94, .28); }
+.focus-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(198, 248, 94, .5); }
