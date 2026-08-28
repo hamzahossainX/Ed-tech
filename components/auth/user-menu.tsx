@@ -17,7 +17,7 @@ export function UserMenu({ user }: UserMenuProps) {
   const avatarSeed = encodeURIComponent(
     user.email?.trim().toLowerCase() || user.name?.trim() || "learnx-user",
   );
-  const avatarUrl = `https://api.dicebear.com/9.x/bottts/svg?seed=${avatarSeed}`;
+  const avatarUrl = `https://api.dicebear.com/9.x/bottts/svg?seed=${avatarSeed}&backgroundColor=transparent`;
 
   return (
     <DropdownMenu>
@@ -27,7 +27,7 @@ export function UserMenu({ user }: UserMenuProps) {
           className="group grid size-10 place-items-center rounded-full outline-none ring-offset-2 transition hover:scale-105 focus-visible:ring-2 focus-visible:ring-[#3c7156] dark:ring-offset-[#0a0a0a]"
           aria-label="Open account menu"
         >
-          <Avatar.Root className="grid size-10 place-items-center overflow-hidden rounded-full border border-black/10 bg-[#173f2c] text-xs font-black text-[#c8ff65] shadow-sm dark:border-white/15">
+          <Avatar.Root className="grid size-10 place-items-center overflow-hidden rounded-full border border-black/10 bg-transparent text-xs font-black text-[#c8ff65] shadow-sm dark:border-white/15">
             <Avatar.Image
               src={avatarUrl}
               alt={`${user.name ?? "LearnX member"}'s robot avatar`}
