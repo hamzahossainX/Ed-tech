@@ -65,7 +65,13 @@ export type GenerateRoadmapState = {
 
 const EDUCATIONAL_REFUSAL_MESSAGE =
   "I am an educational AI. Please enter a valid skill, subject, or career path you want to learn.";
-const DAILY_GENERATION_LIMIT = 3;
+// Keep these limits server-only. The UI intentionally never exposes quota totals.
+const AUTHENTICATED_DAILY_GENERATION_LIMIT = 6;
+const GUEST_DAILY_GENERATION_LIMIT = 3;
+
+type UsageReservation =
+  | { kind: "authenticated"; userId: string }
+  | { kind: "guest"; usageId: string };
 
 function createRoadmapJsonSchema(isAdvanced: boolean) {
   const milestoneProperties = {
@@ -151,47 +157,87 @@ export async function generateRoadmap(
       })
     : null;
   const isAdmin = signedInUser?.role === "admin";
-  const usageId = isAdmin
-    ? null
-    : signedInUser
-      ? `user:${signedInUser.id}`
-      : `guest:${await getOrCreateGuestId()}`;
+  const guestUsageId = !isAdmin && !signedInUser
+    ? `guest:${await getOrCreateGuestId()}`
+    : null;
+  let usageReservation: UsageReservation | null = null;
 
-  if (usageId) {
-    let reservation;
+  if (!isAdmin) {
     try {
-      reservation = await db.execute<{ generation_count: number }>(sql`
-        insert into guest_usage (guest_id, generation_count)
-        values (${usageId}, 1)
-        on conflict (guest_id) do update
+      if (signedInUser) {
+        const reservation = await db.execute<{ daily_generation_count: number }>(sql`
+          update users
           set
-            generation_count = case
-              when guest_usage.created_at < (date_trunc('day', now() at time zone 'Asia/Dhaka') at time zone 'Asia/Dhaka') then 1
-              else guest_usage.generation_count + 1
+            daily_generation_count = case
+              when last_generation_date is distinct from (now() at time zone 'Asia/Dhaka')::date then 1
+              else daily_generation_count + 1
             end,
-            created_at = case
-              when guest_usage.created_at < (date_trunc('day', now() at time zone 'Asia/Dhaka') at time zone 'Asia/Dhaka') then now()
-              else guest_usage.created_at
-            end
-          where
-            guest_usage.created_at < (date_trunc('day', now() at time zone 'Asia/Dhaka') at time zone 'Asia/Dhaka')
-            or guest_usage.generation_count < ${DAILY_GENERATION_LIMIT}
-        returning generation_count
-      `);
+            last_generation_date = (now() at time zone 'Asia/Dhaka')::date,
+            updated_at = now()
+          where id = ${signedInUser.id}
+            and (
+              last_generation_date is distinct from (now() at time zone 'Asia/Dhaka')::date
+              or daily_generation_count < ${AUTHENTICATED_DAILY_GENERATION_LIMIT}
+            )
+          returning daily_generation_count
+        `);
+
+        if (!reservation.rows[0]) {
+          return { success: false, error: "LIMIT_REACHED", limitReachedAt: Date.now() };
+        }
+
+        usageReservation = { kind: "authenticated", userId: signedInUser.id };
+      } else if (guestUsageId) {
+        const reservation = await db.execute<{ generation_count: number }>(sql`
+          insert into guest_usage (guest_id, generation_count)
+          values (${guestUsageId}, 1)
+          on conflict (guest_id) do update
+            set
+              generation_count = case
+                when guest_usage.created_at < (date_trunc('day', now() at time zone 'Asia/Dhaka') at time zone 'Asia/Dhaka') then 1
+                else guest_usage.generation_count + 1
+              end,
+              created_at = case
+                when guest_usage.created_at < (date_trunc('day', now() at time zone 'Asia/Dhaka') at time zone 'Asia/Dhaka') then now()
+                else guest_usage.created_at
+              end
+            where
+              guest_usage.created_at < (date_trunc('day', now() at time zone 'Asia/Dhaka') at time zone 'Asia/Dhaka')
+              or guest_usage.generation_count < ${GUEST_DAILY_GENERATION_LIMIT}
+          returning generation_count
+        `);
+
+        if (!reservation.rows[0]) {
+          return { success: false, error: "LIMIT_REACHED", limitReachedAt: Date.now() };
+        }
+
+        usageReservation = { kind: "guest", usageId: guestUsageId };
+      }
     } catch (error) {
       console.error("Could not check daily generation allowance", error);
       return { success: false, error: "Could not verify your daily allowance. Please try again." };
     }
-
-    if (!reservation.rows[0]) return { success: false, error: "LIMIT_REACHED", limitReachedAt: Date.now() };
   }
 
-  async function releaseGuestReservation() {
-    if (!usageId) return;
+  async function releaseUsageReservation() {
+    if (!usageReservation) return;
+
+    if (usageReservation.kind === "authenticated") {
+      await db.execute(sql`
+        update users
+        set
+          daily_generation_count = greatest(daily_generation_count - 1, 0),
+          updated_at = now()
+        where id = ${usageReservation.userId}
+          and last_generation_date = (now() at time zone 'Asia/Dhaka')::date
+      `).catch((rollbackError) => console.error("Could not release authenticated generation reservation", rollbackError));
+      return;
+    }
+
     await db.execute(sql`
       update guest_usage
       set generation_count = greatest(generation_count - 1, 0)
-      where guest_id = ${usageId}
+      where guest_id = ${usageReservation.usageId}
     `).catch((rollbackError) => console.error("Could not release guest generation reservation", rollbackError));
   }
 
@@ -236,7 +282,7 @@ For a valid educational topic, return {"isValidTopic":true,"isPolicyViolation":f
 
       const backupApiKey = process.env.GROQ_BACKUP_API_KEY;
       if (!backupApiKey) {
-        await releaseGuestReservation();
+        await releaseUsageReservation();
         console.error("Primary Groq API failed and GROQ_BACKUP_API_KEY is not configured", primaryError);
         return {
           success: false,
@@ -248,7 +294,7 @@ For a valid educational topic, return {"isValidTopic":true,"isPolicyViolation":f
         const backupClient = new Groq({ apiKey: backupApiKey });
         completion = await requestRoadmap(backupClient);
       } catch (backupError) {
-        await releaseGuestReservation();
+        await releaseUsageReservation();
         console.error("Both primary and backup Groq API requests failed", {
           primaryError,
           backupError,
@@ -265,7 +311,7 @@ For a valid educational topic, return {"isValidTopic":true,"isPolicyViolation":f
     if (process.env.NODE_ENV === "development") console.log("RAW AI RESPONSE:", rawContent);
     const aiResponse = createAiResponseSchema(isAdvanced).parse(JSON.parse(rawContent));
     if (aiResponse.isPolicyViolation) {
-      await releaseGuestReservation();
+      await releaseUsageReservation();
       return {
         success: false,
         isPolicyViolation: true,
@@ -274,7 +320,7 @@ For a valid educational topic, return {"isValidTopic":true,"isPolicyViolation":f
     }
 
     if (aiResponse.isGibberish) {
-      await releaseGuestReservation();
+      await releaseUsageReservation();
       return {
         success: false,
         isGibberish: true,
@@ -282,7 +328,7 @@ For a valid educational topic, return {"isValidTopic":true,"isPolicyViolation":f
     }
 
     if (!aiResponse.isValidTopic || !aiResponse.roadmap) {
-      await releaseGuestReservation();
+      await releaseUsageReservation();
       return {
         success: false,
         warning: aiResponse.message.trim() || EDUCATIONAL_REFUSAL_MESSAGE,
@@ -325,7 +371,7 @@ For a valid educational topic, return {"isValidTopic":true,"isPolicyViolation":f
     if (!roadmapId) throw new Error("Could not save the generated roadmap.");
     createdRoadmapId = roadmapId;
   } catch (error) {
-    await releaseGuestReservation();
+    await releaseUsageReservation();
     console.error("🔥 GROQ API OR PARSING ERROR:", error);
     return {
       success: false,

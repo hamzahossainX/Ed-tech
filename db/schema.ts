@@ -2,6 +2,7 @@ import { relations, sql } from "drizzle-orm";
 import type { AdapterAccount } from "next-auth/adapters";
 import {
   boolean,
+  date,
   integer,
   jsonb,
   pgEnum,
@@ -37,6 +38,8 @@ export const users = pgTable("users", {
   image: text("image"),
   password: text("password"),
   role: userRole("role").notNull().default("student"),
+  dailyGenerationCount: integer("daily_generation_count").notNull().default(0),
+  lastGenerationDate: date("last_generation_date"),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
 });
