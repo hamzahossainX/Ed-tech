@@ -14,6 +14,11 @@ export function UserMenu({ user }: UserMenuProps) {
     .join("")
     .slice(0, 2)
     .toUpperCase() || "LX";
+  const avatarSeed = encodeURIComponent(
+    user.email?.trim().toLowerCase() || user.name?.trim() || "learnx-user",
+  );
+  const avatarUrl = `https://api.dicebear.com/9.x/bottts/svg?seed=${avatarSeed}`;
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -23,13 +28,12 @@ export function UserMenu({ user }: UserMenuProps) {
           aria-label="Open account menu"
         >
           <Avatar.Root className="grid size-10 place-items-center overflow-hidden rounded-full border border-black/10 bg-[#173f2c] text-xs font-black text-[#c8ff65] shadow-sm dark:border-white/15">
-            {user.image && (
-              <Avatar.Image
-                src={user.image}
-                alt={user.name ?? "GitHub profile"}
-                className="size-full object-cover"
-              />
-            )}
+            <Avatar.Image
+              src={avatarUrl}
+              alt={`${user.name ?? "LearnX member"}'s robot avatar`}
+              referrerPolicy="no-referrer"
+              className="size-full object-cover transition-transform duration-300 ease-out group-hover:scale-110 group-hover:rotate-12"
+            />
             <Avatar.Fallback delayMs={300}>{initials}</Avatar.Fallback>
           </Avatar.Root>
         </button>
