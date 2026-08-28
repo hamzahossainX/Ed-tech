@@ -2,10 +2,11 @@
 
 import { useActionState, useEffect, useRef, useState } from "react";
 import { useFormStatus } from "react-dom";
-import { ArrowUpRight, Sparkles, TriangleAlert } from "lucide-react";
+import { ArrowUpRight, ShieldAlert, Sparkles, TriangleAlert } from "lucide-react";
 import { generateRoadmap, type GenerateRoadmapState } from "@/app/actions/generate-roadmap";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Switch } from "@/components/ui/switch";
+import { ROADMAP_PROMPT_ERROR, roadmapPromptSchema } from "@/lib/roadmap-validation";
 
 const initialState: GenerateRoadmapState = {};
 const BUSY_SERVER_MESSAGE =
@@ -21,10 +22,42 @@ async function submitRoadmap(
   previousState: GenerateRoadmapState,
   formData: FormData,
 ): Promise<GenerateRoadmapState> {
+  const parsedPrompt = roadmapPromptSchema.safeParse(formData.get("prompt"));
+  if (!parsedPrompt.success) {
+    return {
+      success: false,
+      isValidationError: true,
+      error: ROADMAP_PROMPT_ERROR,
+    };
+  }
+
   try {
     const result = await generateRoadmap(previousState, formData);
 
+    if (result.isGibberish) {
+      return {
+        success: false,
+        isGibberish: true,
+      };
+    }
+
+    if (result.isPolicyViolation) {
+      return {
+        success: false,
+        isPolicyViolation: true,
+        violationReason: result.violationReason ?? "prohibited harmful activity",
+      };
+    }
+
     if (result.error && result.error !== "LIMIT_REACHED") {
+      if (result.isValidationError) {
+        return {
+          success: false,
+          isValidationError: true,
+          error: ROADMAP_PROMPT_ERROR,
+        };
+      }
+
       return {
         success: false,
         error: BUSY_SERVER_MESSAGE,
@@ -62,14 +95,14 @@ export function RoadmapPrompt() {
   }
 
   return (
-    <><form action={action} className="relative overflow-hidden rounded-3xl bg-[#173f2c] p-4 text-white shadow-[0_24px_80px_rgba(23,63,44,.18)] sm:p-6 md:rounded-[2rem] md:p-9">
+    <><form action={action} noValidate className="relative overflow-hidden rounded-3xl bg-[#173f2c] p-4 text-white shadow-[0_24px_80px_rgba(23,63,44,.18)] sm:p-6 md:rounded-[2rem] md:p-9">
       <div className="absolute -right-16 -top-20 size-56 rounded-full bg-[#c8ff65]/10 blur-2xl" />
       <div className="relative">
         <div className="mb-5 flex items-center gap-2 text-xs font-black uppercase tracking-[.2em] text-[#c8ff65]"><Sparkles size={16} /> AI path builder</div>
         <label htmlFor="roadmap-prompt" className="block text-xl font-black tracking-tight sm:text-2xl md:text-3xl">What do you want to become great at?</label>
         <p className="mt-2 max-w-2xl text-sm leading-6 text-white/55">Include your goal, experience level, and available time. LearnX will turn it into a practical path.</p>
         <div className="mt-6 flex w-full flex-col gap-2 rounded-2xl bg-white p-2 md:flex-row md:gap-3">
-          <textarea ref={promptRef} id="roadmap-prompt" name="prompt" value={prompt} onChange={(event) => setPrompt(event.target.value)} required minLength={12} maxLength={500} rows={2} placeholder="I want to learn Python in 3 months and can study 8 hours each week..." className="min-h-24 w-full flex-1 resize-none rounded-xl px-3 py-3 text-sm leading-6 text-[#17211b] outline-none placeholder:text-black/35 focus:ring-4 focus:ring-[#c8ff65]/35 sm:px-4 sm:text-[15px] md:min-h-16" />
+          <textarea ref={promptRef} id="roadmap-prompt" name="prompt" value={prompt} onChange={(event) => setPrompt(event.target.value)} required minLength={3} maxLength={80} rows={2} placeholder="I want to learn Python in 3 months..." className="min-h-24 w-full flex-1 resize-none rounded-xl px-3 py-3 text-sm leading-6 text-[#17211b] outline-none placeholder:text-black/35 focus:ring-4 focus:ring-[#c8ff65]/35 sm:px-4 sm:text-[15px] md:min-h-16" />
           <SubmitButton isAdvanced={isAdvanced} />
         </div>
         <input type="hidden" name="isAdvanced" value={String(isAdvanced)} />
@@ -77,8 +110,11 @@ export function RoadmapPrompt() {
           <span className="min-w-0"><span className="block text-sm font-bold text-white">Advanced Mode</span><span className="mt-0.5 block text-xs leading-5 text-white/50">Deep Dive &amp; Interview Prep</span></span>
           <Switch id="advanced-mode" checked={isAdvanced} onCheckedChange={setIsAdvanced} aria-label="Advanced Mode: Deep Dive and Interview Prep" />
         </label>
-        {state.warning && <p role="alert" className="mt-3 flex items-start gap-2 rounded-xl border border-amber-300/25 bg-amber-300/15 px-4 py-3 text-sm leading-5 text-amber-100"><TriangleAlert className="mt-0.5 size-4 shrink-0" aria-hidden="true" />{state.warning}</p>}
-        {state.error && state.error !== "LIMIT_REACHED" && <p role="alert" aria-live="polite" className="mt-3 break-words rounded-xl border border-amber-300/25 bg-amber-300/15 px-4 py-3 text-sm leading-5 text-amber-100">{BUSY_SERVER_MESSAGE}</p>}
+        {state.isPolicyViolation && <div role="alert" aria-live="assertive" className="mt-3 flex items-start gap-3 rounded-xl border border-red-400/50 bg-red-500/20 px-4 py-4 text-sm leading-6 text-red-50 shadow-[0_0_30px_rgba(239,68,68,.16)]"><ShieldAlert className="mt-0.5 size-5 shrink-0 text-red-300" aria-hidden="true" /><p><strong className="font-black">Security Alert:</strong> You are attempting to learn about {state.violationReason ?? "prohibited harmful activity"}. We cannot generate this content. This request violates our platform&apos;s safety rules and educational guidelines.</p></div>}
+        {!state.isPolicyViolation && state.isGibberish && <p role="alert" aria-live="assertive" className="mt-3 flex items-start gap-2 rounded-xl border border-amber-300/35 bg-amber-300/15 px-4 py-3 text-sm leading-5 text-amber-100"><TriangleAlert className="mt-0.5 size-4 shrink-0" aria-hidden="true" />We couldn&apos;t understand that. Please enter a meaningful skill or topic you want to learn.</p>}
+        {!state.isPolicyViolation && !state.isGibberish && state.warning && <p role="alert" className="mt-3 flex items-start gap-2 rounded-xl border border-amber-300/25 bg-amber-300/15 px-4 py-3 text-sm leading-5 text-amber-100"><TriangleAlert className="mt-0.5 size-4 shrink-0" aria-hidden="true" />{state.warning}</p>}
+        {!state.isPolicyViolation && !state.isGibberish && state.isValidationError && <p role="alert" aria-live="polite" className="mt-3 flex items-start gap-2 rounded-xl border border-amber-300/35 bg-amber-300/15 px-4 py-3 text-sm leading-5 text-amber-100"><TriangleAlert className="mt-0.5 size-4 shrink-0" aria-hidden="true" />{ROADMAP_PROMPT_ERROR}</p>}
+        {!state.isPolicyViolation && !state.isGibberish && !state.isValidationError && state.error && state.error !== "LIMIT_REACHED" && <p role="alert" aria-live="polite" className="mt-3 break-words rounded-xl border border-amber-300/25 bg-amber-300/15 px-4 py-3 text-sm leading-5 text-amber-100">{BUSY_SERVER_MESSAGE}</p>}
         <div className="mt-4 flex max-w-full flex-wrap items-center gap-2 text-xs text-white/45"><span className="mr-1 font-semibold text-white/55">Try:</span>{suggestions.map((suggestion) => <button key={suggestion} type="button" onClick={() => selectSuggestion(suggestion)} aria-label={`Use prompt: ${suggestion}`} className="max-w-full break-words rounded-full border border-white/15 px-3 py-2 text-left leading-4 text-white/65 transition hover:-translate-y-0.5 hover:border-[#c8ff65]/50 hover:bg-[#c8ff65]/10 hover:text-[#c8ff65] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#c8ff65]">{suggestion}</button>)}</div>
       </div>
     </form><Dialog open={limitOpen} onOpenChange={setLimitOpen}><DialogContent className="max-w-md border-white/10 bg-[#fffefa] dark:bg-[#111512] dark:text-white"><DialogHeader><div className="mb-3 grid size-14 place-items-center rounded-2xl bg-[#c8ff65] text-2xl shadow-[0_0_35px_rgba(200,255,101,.25)]">🚀</div><DialogTitle>Daily Limit Reached!</DialogTitle><DialogDescription className="dark:text-white/55">You&apos;ve used today&apos;s 3 free roadmap generations. Your allowance resets automatically at midnight (Dhaka time).</DialogDescription></DialogHeader><button type="button" onClick={() => setLimitOpen(false)} className="mt-5 min-h-11 w-full rounded-xl bg-[#173f2c] px-5 font-black text-white transition hover:bg-[#21573d] dark:bg-[#c8ff65] dark:text-[#17211b]">Got it</button></DialogContent></Dialog></>
