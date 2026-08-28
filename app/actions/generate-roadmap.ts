@@ -1,6 +1,7 @@
 "use server";
 
 import { eq, sql } from "drizzle-orm";
+import Groq from "groq-sdk";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
@@ -177,8 +178,8 @@ export async function generateRoadmap(
 
   let createdRoadmapId: string;
   try {
-    async function requestRoadmap(retry = false) {
-      return getGroq().chat.completions.create({
+    async function requestRoadmap(client: Groq) {
+      return client.chat.completions.create({
         model: process.env.GROQ_MODEL ?? "openai/gpt-oss-20b",
         temperature: 0.4,
         // The current Groq on-demand tier allows 8,000 TPM. The prompt plus
@@ -191,7 +192,7 @@ export async function generateRoadmap(
 
 For an invalid topic, return only this JSON shape: {"isValidTopic":false,"message":"${EDUCATIONAL_REFUSAL_MESSAGE}","roadmap":null}. Do not answer the request, provide advice, or create roadmap content.
 
-For a valid educational topic, return {"isValidTopic":true,"message":"","roadmap":{...}}. Create a practical, sequential roadmap and respect the learner's stated time limit. Every milestone must include one or two real, high-quality HTTPS resources that directly teach it. Prefer stable pages from official documentation, standards organizations, universities, MDN, or freeCodeCamp. Do not invent domains or URLs. Use specific page URLs rather than generic homepages.${isAdvanced ? " ADVANCED MODE MUST contain exactly 3 broad milestones, and EVERY milestone MUST include exhaustiveDeepDive. Generate an extremely detailed, comprehensive guide for each milestone in the exhaustiveDeepDive field using Markdown format. It MUST include: 1. A deep explanation of the core concepts. 2. Step-by-step practical implementation or code examples with fenced Markdown code blocks. 3. Top 3 common interview questions WITH detailed solutions. Make it feel like a complete chapter of a book. Use clear headings, lists, tables where useful, and technically accurate examples. Do not omit exhaustiveDeepDive from any milestone, and do not put the entire Markdown string inside an extra fenced code block." : " STANDARD MODE MUST contain 3 to 12 concise milestones and must not add exhaustiveDeepDive."} Return only JSON matching the requested schema.${retry ? " This is a schema-validation retry: re-evaluate the topic, include every required field on every milestone, and ensure the response envelope matches the schema." : ""}`,
+For a valid educational topic, return {"isValidTopic":true,"message":"","roadmap":{...}}. Create a practical, sequential roadmap and respect the learner's stated time limit. Every milestone must include one or two real, high-quality HTTPS resources that directly teach it. Prefer stable pages from official documentation, standards organizations, universities, MDN, or freeCodeCamp. Do not invent domains or URLs. Use specific page URLs rather than generic homepages.${isAdvanced ? " ADVANCED MODE MUST contain exactly 3 broad milestones, and EVERY milestone MUST include exhaustiveDeepDive. Generate an extremely detailed, comprehensive guide for each milestone in the exhaustiveDeepDive field using Markdown format. It MUST include: 1. A deep explanation of the core concepts. 2. Step-by-step practical implementation or code examples with fenced Markdown code blocks. 3. Top 3 common interview questions WITH detailed solutions. Make it feel like a complete chapter of a book. Use clear headings, lists, tables where useful, and technically accurate examples. Do not omit exhaustiveDeepDive from any milestone, and do not put the entire Markdown string inside an extra fenced code block." : " STANDARD MODE MUST contain 3 to 12 concise milestones and must not add exhaustiveDeepDive."} Return only JSON matching the requested schema.`,
           },
           { role: "user", content: prompt },
         ],
@@ -204,10 +205,34 @@ For a valid educational topic, return {"isValidTopic":true,"message":"","roadmap
 
     let completion;
     try {
-      completion = await requestRoadmap();
-    } catch (firstAttemptError) {
-      console.error("🔥 GROQ FIRST ATTEMPT ERROR — RETRYING:", firstAttemptError);
-      completion = await requestRoadmap(true);
+      completion = await requestRoadmap(getGroq());
+    } catch (primaryError) {
+      console.warn("Primary API failed, switching to backup...");
+
+      const backupApiKey = process.env.GROQ_BACKUP_API_KEY;
+      if (!backupApiKey) {
+        await releaseGuestReservation();
+        console.error("Primary Groq API failed and GROQ_BACKUP_API_KEY is not configured", primaryError);
+        return {
+          success: false,
+          error: "The AI service is temporarily unavailable. Please try again shortly.",
+        };
+      }
+
+      try {
+        const backupClient = new Groq({ apiKey: backupApiKey });
+        completion = await requestRoadmap(backupClient);
+      } catch (backupError) {
+        await releaseGuestReservation();
+        console.error("Both primary and backup Groq API requests failed", {
+          primaryError,
+          backupError,
+        });
+        return {
+          success: false,
+          error: "Both AI services are temporarily unavailable. Please try again shortly.",
+        };
+      }
     }
 
     const rawContent = completion.choices[0]?.message.content;
@@ -260,12 +285,9 @@ For a valid educational topic, return {"isValidTopic":true,"message":"","roadmap
   } catch (error) {
     await releaseGuestReservation();
     console.error("🔥 GROQ API OR PARSING ERROR:", error);
-    const exactError = error instanceof Error ? error.message : "Unknown error occurred";
     return {
       success: false,
-      error: process.env.NODE_ENV === "development"
-        ? exactError
-        : "Roadmap generation failed. Check your AI configuration and try again.",
+      error: "Roadmap generation is temporarily unavailable.",
     };
   }
 

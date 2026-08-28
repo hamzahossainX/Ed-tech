@@ -8,6 +8,8 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Switch } from "@/components/ui/switch";
 
 const initialState: GenerateRoadmapState = {};
+const BUSY_SERVER_MESSAGE =
+  "Servers are currently experiencing high traffic. Please wait a moment and try again.";
 const suggestions = [
   "Full-Stack Next.js Developer in 3 months",
   "Cybersecurity & Bug Bounty basics in 8 weeks",
@@ -15,8 +17,33 @@ const suggestions = [
   "UI/UX Design for beginners in 4 weeks",
 ] as const;
 
+async function submitRoadmap(
+  previousState: GenerateRoadmapState,
+  formData: FormData,
+): Promise<GenerateRoadmapState> {
+  try {
+    const result = await generateRoadmap(previousState, formData);
+
+    if (result.error && result.error !== "LIMIT_REACHED") {
+      return {
+        success: false,
+        error: BUSY_SERVER_MESSAGE,
+      };
+    }
+
+    return result;
+  } catch {
+    // Never expose Server Action exceptions or raw backend messages in the UI
+    // or the browser console. Server-side logs remain available for diagnosis.
+    return {
+      success: false,
+      error: BUSY_SERVER_MESSAGE,
+    };
+  }
+}
+
 export function RoadmapPrompt() {
-  const [state, action] = useActionState(generateRoadmap, initialState);
+  const [state, action] = useActionState(submitRoadmap, initialState);
   const [prompt, setPrompt] = useState("");
   const [isAdvanced, setIsAdvanced] = useState(false);
   const [limitOpen, setLimitOpen] = useState(false);
@@ -51,7 +78,7 @@ export function RoadmapPrompt() {
           <Switch id="advanced-mode" checked={isAdvanced} onCheckedChange={setIsAdvanced} aria-label="Advanced Mode: Deep Dive and Interview Prep" />
         </label>
         {state.warning && <p role="alert" className="mt-3 flex items-start gap-2 rounded-xl border border-amber-300/25 bg-amber-300/15 px-4 py-3 text-sm leading-5 text-amber-100"><TriangleAlert className="mt-0.5 size-4 shrink-0" aria-hidden="true" />{state.warning}</p>}
-        {state.success === false && state.error && state.error !== "LIMIT_REACHED" && <p role="alert" className="mt-3 break-words rounded-xl border border-red-300/20 bg-red-400/15 px-4 py-3 text-sm leading-5 text-red-100">{state.error}</p>}
+        {state.error && state.error !== "LIMIT_REACHED" && <p role="alert" aria-live="polite" className="mt-3 break-words rounded-xl border border-amber-300/25 bg-amber-300/15 px-4 py-3 text-sm leading-5 text-amber-100">{BUSY_SERVER_MESSAGE}</p>}
         <div className="mt-4 flex max-w-full flex-wrap items-center gap-2 text-xs text-white/45"><span className="mr-1 font-semibold text-white/55">Try:</span>{suggestions.map((suggestion) => <button key={suggestion} type="button" onClick={() => selectSuggestion(suggestion)} aria-label={`Use prompt: ${suggestion}`} className="max-w-full break-words rounded-full border border-white/15 px-3 py-2 text-left leading-4 text-white/65 transition hover:-translate-y-0.5 hover:border-[#c8ff65]/50 hover:bg-[#c8ff65]/10 hover:text-[#c8ff65] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#c8ff65]">{suggestion}</button>)}</div>
       </div>
     </form><Dialog open={limitOpen} onOpenChange={setLimitOpen}><DialogContent className="max-w-md border-white/10 bg-[#fffefa] dark:bg-[#111512] dark:text-white"><DialogHeader><div className="mb-3 grid size-14 place-items-center rounded-2xl bg-[#c8ff65] text-2xl shadow-[0_0_35px_rgba(200,255,101,.25)]">🚀</div><DialogTitle>Daily Limit Reached!</DialogTitle><DialogDescription className="dark:text-white/55">You&apos;ve used today&apos;s 3 free roadmap generations. Your allowance resets automatically at midnight (Dhaka time).</DialogDescription></DialogHeader><button type="button" onClick={() => setLimitOpen(false)} className="mt-5 min-h-11 w-full rounded-xl bg-[#173f2c] px-5 font-black text-white transition hover:bg-[#21573d] dark:bg-[#c8ff65] dark:text-[#17211b]">Got it</button></DialogContent></Dialog></>

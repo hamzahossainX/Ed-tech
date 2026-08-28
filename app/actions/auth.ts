@@ -21,18 +21,44 @@ export async function registerUser(input: RegistrationInput): Promise<RegisterRe
 
   const { firstName, lastName, email, password } = parsed.data;
   const name = `${firstName} ${lastName}`;
-  const existing = await db.query.users.findFirst({ where: eq(users.email, email), columns: { id: true, password: true } });
-  if (existing) {
-    return { success: false, message: existing.password ? "An account already exists for this email." : "This email uses GitHub sign-in. Continue with GitHub instead.", fields: { email: "Email is already registered" } };
-  }
-
-  const passwordHash = await hash(password, 12);
 
   try {
-    await db.insert(users).values({ name, email, password: passwordHash });
+    const existing = await db.query.users.findFirst({
+      where: eq(users.email, email),
+      columns: { id: true, password: true },
+    });
+
+    if (existing) {
+      return {
+        success: false,
+        message: existing.password
+          ? "An account already exists for this email."
+          : "This email uses GitHub sign-in. Continue with GitHub instead.",
+        fields: { email: "Email is already registered" },
+      };
+    }
+
+    const passwordHash = await hash(password, 12);
+    const [created] = await db
+      .insert(users)
+      .values({ name, email, password: passwordHash })
+      .onConflictDoNothing({ target: users.email })
+      .returning({ id: users.id });
+
+    if (!created) {
+      return {
+        success: false,
+        message: "An account already exists for this email.",
+        fields: { email: "Email is already registered" },
+      };
+    }
+
     return { success: true };
   } catch (error) {
     console.error("Registration failed", error);
-    return { success: false, message: "Could not create your account. Please try again." };
+    return {
+      success: false,
+      message: "Account creation is temporarily unavailable. Please try again shortly.",
+    };
   }
 }

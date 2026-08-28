@@ -9,6 +9,8 @@ import { accounts, sessions, users, verificationTokens } from "@/db/schema";
 import { loginSchema } from "@/lib/auth-validation";
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
+  secret: process.env.AUTH_SECRET,
+  trustHost: true,
   adapter: DrizzleAdapter(db, {
     usersTable: users,
     accountsTable: accounts,
@@ -30,15 +32,20 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         const parsed = loginSchema.safeParse(credentials);
         if (!parsed.success) return null;
 
-        const user = await db.query.users.findFirst({
-          where: eq(users.email, parsed.data.email),
-        });
+        try {
+          const user = await db.query.users.findFirst({
+            where: eq(users.email, parsed.data.email),
+          });
 
-        if (!user?.password) return null;
-        const validPassword = await compare(parsed.data.password, user.password);
-        if (!validPassword) return null;
+          if (!user?.password) return null;
+          const validPassword = await compare(parsed.data.password, user.password);
+          if (!validPassword) return null;
 
-        return { id: user.id, name: user.name, email: user.email, image: user.image };
+          return { id: user.id, name: user.name, email: user.email, image: user.image };
+        } catch (error) {
+          console.error("Credentials authentication database lookup failed", error);
+          throw new Error("Authentication service unavailable", { cause: error });
+        }
       },
     }),
   ],
