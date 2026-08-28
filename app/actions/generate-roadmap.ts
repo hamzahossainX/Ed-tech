@@ -68,6 +68,8 @@ const EDUCATIONAL_REFUSAL_MESSAGE =
 // Keep these limits server-only. The UI intentionally never exposes quota totals.
 const AUTHENTICATED_DAILY_GENERATION_LIMIT = 6;
 const GUEST_DAILY_GENERATION_LIMIT = 3;
+const ADVANCED_MAX_COMPLETION_TOKENS = 7000;
+const STANDARD_MAX_COMPLETION_TOKENS = 5000;
 
 type UsageReservation =
   | { kind: "authenticated"; userId: string }
@@ -247,9 +249,15 @@ export async function generateRoadmap(
       return client.chat.completions.create({
         model: process.env.GROQ_MODEL ?? "openai/gpt-oss-20b",
         temperature: 0.4,
-        // The current Groq on-demand tier allows 8,000 TPM. The prompt plus
-        // reserved completion tokens must remain below that hard limit.
-        max_completion_tokens: isAdvanced ? 6500 : 5000,
+        // max_tokens is deprecated by Groq; max_completion_tokens is its
+        // supported replacement. Advanced Mode receives the larger budget.
+        max_completion_tokens: isAdvanced
+          ? ADVANCED_MAX_COMPLETION_TOKENS
+          : STANDARD_MAX_COMPLETION_TOKENS,
+        // GPT-OSS spends completion tokens on reasoning too. Keeping reasoning
+        // low and hidden leaves substantially more room for the roadmap JSON.
+        reasoning_effort: "low",
+        reasoning_format: "hidden",
         messages: [
           {
             role: "system",
@@ -263,27 +271,61 @@ Next, evaluate whether the input has coherent meaning. Treat meaningless letter 
 
 If the input is coherent and harmless but is NOT related to learning a skill, academic subject, technology, career path, or professional development, refuse without a security warning. Return exactly: {"isValidTopic":false,"isPolicyViolation":false,"violationReason":null,"isGibberish":false,"message":"${EDUCATIONAL_REFUSAL_MESSAGE}","roadmap":null}.
 
-For a valid educational topic, return {"isValidTopic":true,"isPolicyViolation":false,"violationReason":null,"isGibberish":false,"message":"","roadmap":{...}}. Create a practical, sequential roadmap and respect the learner's stated time limit. Every milestone must include one or two real, high-quality HTTPS resources that directly teach it. Prefer stable pages from official documentation, standards organizations, universities, MDN, or freeCodeCamp. Do not invent domains or URLs. Use specific page URLs rather than generic homepages.${isAdvanced ? " ADVANCED MODE MUST contain exactly 3 broad milestones, and EVERY milestone MUST include exhaustiveDeepDive. Generate an extremely detailed, comprehensive guide for each milestone in the exhaustiveDeepDive field using Markdown format. It MUST include: 1. A deep explanation of the core concepts. 2. Step-by-step practical implementation or code examples with fenced Markdown code blocks. 3. Top 3 common interview questions WITH detailed solutions. Make it feel like a complete chapter of a book. Use clear headings, lists, tables where useful, and technically accurate examples. Do not omit exhaustiveDeepDive from any milestone, and do not put the entire Markdown string inside an extra fenced code block." : " STANDARD MODE MUST contain 3 to 12 concise milestones and must not add exhaustiveDeepDive."} Return only JSON matching the requested schema.`,
+For a valid educational topic, return {"isValidTopic":true,"isPolicyViolation":false,"violationReason":null,"isGibberish":false,"message":"","roadmap":{...}}. Create a practical, sequential roadmap and respect the learner's stated time limit. Every milestone must include one or two real, high-quality HTTPS resources that directly teach it. Prefer stable pages from official documentation, standards organizations, universities, MDN, or freeCodeCamp. Do not invent domains or URLs. Use specific page URLs rather than generic homepages.${isAdvanced ? " ADVANCED MODE MUST contain exactly 3 broad milestones, and EVERY milestone MUST include exhaustiveDeepDive. Generate a detailed guide of roughly 700 to 1,000 words for each milestone's exhaustiveDeepDive field using Markdown. Every guide MUST include: 1. A deep explanation of the core concepts. 2. Step-by-step practical implementation or code examples with fenced Markdown code blocks. 3. Top 3 common interview questions WITH detailed solutions. Use clear headings, lists, tables where useful, and technically accurate examples. Do not omit exhaustiveDeepDive from any milestone, and do not put the entire Markdown string inside an extra fenced code block. The roadmap object must contain title, description, estimatedDuration, and milestones. Every milestone must contain title, description, duration, resources, and exhaustiveDeepDive." : " STANDARD MODE MUST contain 3 to 12 concise milestones and must not add exhaustiveDeepDive."}
+
+You must respond with one valid JSON object and nothing else. Never wrap the JSON in Markdown fences. All Markdown is data inside JSON string fields: escape every double quote, backslash, control character, and newline correctly (use \\n for line breaks) so JSON.parse can parse the entire response. Return only JSON matching the requested shape.`,
           },
           { role: "user", content: prompt },
         ],
-        response_format: {
-          type: "json_schema",
-          json_schema: { name: isAdvanced ? "advanced_learning_roadmap" : "learning_roadmap", strict: true, schema: createRoadmapJsonSchema(isAdvanced) },
-        },
+        response_format: isAdvanced
+          ? { type: "json_object" }
+          : {
+              type: "json_schema",
+              json_schema: {
+                name: "learning_roadmap",
+                strict: true,
+                schema: createRoadmapJsonSchema(false),
+              },
+            },
       });
     }
 
-    let completion;
+    async function requestAndValidateRoadmap(client: Groq) {
+      const completion = await requestRoadmap(client);
+      const choice = completion.choices[0];
+
+      if (!choice) throw new Error("Groq returned no completion choice.");
+      if (choice.finish_reason === "length") {
+        throw new Error(
+          `Groq truncated the ${isAdvanced ? "advanced" : "standard"} roadmap at the completion-token limit.`,
+        );
+      }
+
+      const rawContent = choice.message.content;
+      if (!rawContent) throw new Error("Groq returned an empty roadmap response.");
+
+      let parsedContent: unknown;
+      try {
+        parsedContent = JSON.parse(rawContent);
+      } catch (parseError) {
+        throw new Error("Groq returned malformed or truncated JSON.", {
+          cause: parseError,
+        });
+      }
+
+      return createAiResponseSchema(isAdvanced).parse(parsedContent);
+    }
+
+    let aiResponse;
     try {
-      completion = await requestRoadmap(getGroq());
+      aiResponse = await requestAndValidateRoadmap(getGroq());
     } catch (primaryError) {
-      console.warn("Primary API failed, switching to backup...");
+      console.warn("Primary API failed, switching to backup...", primaryError);
 
       const backupApiKey = process.env.GROQ_BACKUP_API_KEY;
       if (!backupApiKey) {
         await releaseUsageReservation();
-        console.error("Primary Groq API failed and GROQ_BACKUP_API_KEY is not configured", primaryError);
+        console.error("CRITICAL AI ERROR:", primaryError);
         return {
           success: false,
           error: "The AI service is temporarily unavailable. Please try again shortly.",
@@ -292,10 +334,10 @@ For a valid educational topic, return {"isValidTopic":true,"isPolicyViolation":f
 
       try {
         const backupClient = new Groq({ apiKey: backupApiKey });
-        completion = await requestRoadmap(backupClient);
+        aiResponse = await requestAndValidateRoadmap(backupClient);
       } catch (backupError) {
         await releaseUsageReservation();
-        console.error("Both primary and backup Groq API requests failed", {
+        console.error("CRITICAL AI ERROR:", {
           primaryError,
           backupError,
         });
@@ -306,10 +348,6 @@ For a valid educational topic, return {"isValidTopic":true,"isPolicyViolation":f
       }
     }
 
-    const rawContent = completion.choices[0]?.message.content;
-    if (!rawContent) throw new Error("The AI did not return a roadmap.");
-    if (process.env.NODE_ENV === "development") console.log("RAW AI RESPONSE:", rawContent);
-    const aiResponse = createAiResponseSchema(isAdvanced).parse(JSON.parse(rawContent));
     if (aiResponse.isPolicyViolation) {
       await releaseUsageReservation();
       return {
@@ -372,7 +410,7 @@ For a valid educational topic, return {"isValidTopic":true,"isPolicyViolation":f
     createdRoadmapId = roadmapId;
   } catch (error) {
     await releaseUsageReservation();
-    console.error("🔥 GROQ API OR PARSING ERROR:", error);
+    console.error("CRITICAL AI ERROR:", error);
     return {
       success: false,
       error: "Roadmap generation is temporarily unavailable.",
