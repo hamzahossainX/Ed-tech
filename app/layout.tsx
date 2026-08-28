@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Toaster } from "sonner";
 import { ThemeProvider } from "@/components/theme-provider";
 import "./globals.css";
 
@@ -15,6 +16,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
           <div className="min-h-screen bg-[#f8f9fa] dark:bg-[#0a0a0a]">
             {children}
           </div>
+          <Toaster richColors closeButton position="top-right" theme="system" />
         </ThemeProvider>
       </body>
     </html>
