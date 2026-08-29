@@ -135,6 +135,7 @@ export const roadmapMilestones = pgTable("roadmap_milestones", {
   example: text("example"),
   interviewQuestions: jsonb("interview_questions").$type<string[]>().notNull().default(sql`'[]'::jsonb`),
   exhaustiveDeepDive: text("exhaustive_deep_dive"),
+  eli5Explanation: jsonb("eli5_explanation").$type<string[]>(),
   position: integer("position").notNull(),
   isCompleted: boolean("is_completed").notNull().default(false),
   completedAt: timestamp("completed_at", { withTimezone: true }),
