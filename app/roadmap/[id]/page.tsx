@@ -10,6 +10,8 @@ import { aiRoadmaps } from "@/db/schema";
 
 type Props = { params: Promise<{ id: string }> };
 
+export const maxDuration = 60;
+
 export default async function RoadmapPage({ params }: Props) {
   const { id } = await params;
   if (!z.string().uuid().safeParse(id).success) notFound();
