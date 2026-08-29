@@ -13,7 +13,9 @@ The current version does not require an account. This keeps the demo flow short,
 - Export the certificate as a client-generated PDF
 - Open a roadmap directly at `/roadmap/[id]`
 - Mark milestones complete with optimistic UI updates
-- Track completion as a percentage
+- Simplify technical milestones into four or five child-friendly ELI5 points
+- Track completion with a progress bar and completion confetti
+- Export a complete roadmap as a multi-page PDF or Notion-ready Markdown
 - Run the same application locally or on Vercel
 
 ## Technology
@@ -45,6 +47,7 @@ The current version does not require an account. This keeps the demo flow short,
 app/
 ├── actions/
 │   ├── generate-roadmap.ts       # Groq request and atomic database insert
+│   ├── simplify-milestone.ts     # Cached ELI5 explanation generation
 │   └── toggle-milestone.ts       # Milestone completion mutation
 ├── roadmap/[id]/page.tsx         # Public roadmap page
 ├── globals.css
@@ -213,6 +216,9 @@ For roadmap changes, test this sequence locally:
 3. Refresh the roadmap and check that milestones remain ordered.
 4. Open a resource and confirm it loads in a new tab.
 5. Toggle a milestone, refresh again, and confirm the completion state persisted.
+6. Open Focus Mode and confirm the ELI5 explanation is generated and cached.
+7. Complete a milestone and confirm the progress bar and confetti respond.
+8. Export the roadmap and verify both the PDF and Notion-ready Markdown options.
 
 ## License
 
