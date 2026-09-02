@@ -8,6 +8,12 @@ import { z } from "zod";
 import { auth } from "@/auth";
 import { db } from "@/db";
 import { users } from "@/db/schema";
+import {
+  generatedResourceSchema,
+  getRejectedGeneration,
+  normalizeGeneratedMilestones,
+  normalizeGeneratedResources,
+} from "@/lib/ai-roadmap-response";
 import { getGroq } from "@/lib/groq";
 import { getOrCreateGuestId } from "@/lib/guest";
 import { ROADMAP_PROMPT_ERROR, roadmapPromptSchema } from "@/lib/roadmap-validation";
@@ -16,10 +22,13 @@ const milestoneSchema = z.object({
   title: z.string().min(3).max(120),
   description: z.string().min(10).max(500),
   duration: z.string().min(2).max(50),
-  resources: z.array(z.object({
-    title: z.string().min(2).max(100),
-    url: z.url().refine((url) => url.startsWith("https://"), "Resource links must use HTTPS"),
-  })).min(1).max(2),
+  // Some models occasionally interleave empty strings between otherwise valid
+  // resource objects. Discard malformed entries, deduplicate, and retain the
+  // product contract of one or two verified HTTPS links.
+  resources: z.preprocess(
+    normalizeGeneratedResources,
+    z.array(generatedResourceSchema).min(1).max(2),
+  ),
 });
 
 const advancedMilestoneSchema = milestoneSchema.extend({
@@ -27,11 +36,16 @@ const advancedMilestoneSchema = milestoneSchema.extend({
 });
 
 function createRoadmapSchema(isAdvanced: boolean) {
+  const maximumMilestones = isAdvanced ? 3 : 12;
+
   return z.object({
   title: z.string().min(3).max(120),
   description: z.string().min(10).max(500),
   estimatedDuration: z.string().min(2).max(50),
-    milestones: z.array(isAdvanced ? advancedMilestoneSchema : milestoneSchema).min(3).max(isAdvanced ? 3 : 12),
+    milestones: z.preprocess(
+      (value) => normalizeGeneratedMilestones(value, maximumMilestones),
+      z.array(isAdvanced ? advancedMilestoneSchema : milestoneSchema).min(3).max(maximumMilestones),
+    ),
   });
 }
 
@@ -83,15 +97,24 @@ function createRoadmapJsonSchema(isAdvanced: boolean) {
     resources: {
       type: "array",
       minItems: 1,
-      maxItems: 2,
+      // The transport schema is intentionally more tolerant than the stored
+      // model. The Zod boundary below filters malformed separators and caps
+      // persisted resources at two items.
+      maxItems: 8,
       items: {
-        type: "object",
-        additionalProperties: false,
-        properties: {
-          title: { type: "string" },
-          url: { type: "string" },
-        },
-        required: ["title", "url"],
+        anyOf: [
+          {
+            type: "object",
+            additionalProperties: false,
+            properties: {
+              title: { type: "string" },
+              url: { type: "string" },
+            },
+            required: ["title", "url"],
+          },
+          { type: "string" },
+          { type: "null" },
+        ],
       },
     },
     ...(isAdvanced ? {
@@ -291,18 +314,31 @@ You must respond with one valid JSON object and nothing else. Never wrap the JSO
     }
 
     async function requestAndValidateRoadmap(client: Groq) {
-      const completion = await requestRoadmap(client);
-      const choice = completion.choices[0];
+      let rawContent: string;
 
-      if (!choice) throw new Error("Groq returned no completion choice.");
-      if (choice.finish_reason === "length") {
-        throw new Error(
-          `Groq truncated the ${isAdvanced ? "advanced" : "standard"} roadmap at the completion-token limit.`,
-        );
+      try {
+        const completion = await requestRoadmap(client);
+        const choice = completion.choices[0];
+
+        if (!choice) throw new Error("Groq returned no completion choice.");
+        if (choice.finish_reason === "length") {
+          throw new Error(
+            `Groq truncated the ${isAdvanced ? "advanced" : "standard"} roadmap at the completion-token limit.`,
+          );
+        }
+
+        rawContent = choice.message.content ?? "";
+        if (!rawContent) throw new Error("Groq returned an empty roadmap response.");
+      } catch (requestError) {
+        const rejectedGeneration = getRejectedGeneration(requestError);
+        if (!rejectedGeneration) throw requestError;
+
+        // Groq may reject a mostly valid structured response before returning a
+        // completion. Recovery is safe because it still has to pass JSON.parse,
+        // resource normalization, and the complete application Zod schema.
+        console.warn("Groq rejected its structured payload; validating the recoverable response locally.");
+        rawContent = rejectedGeneration;
       }
-
-      const rawContent = choice.message.content;
-      if (!rawContent) throw new Error("Groq returned an empty roadmap response.");
 
       let parsedContent: unknown;
       try {
