@@ -511,6 +511,14 @@ You must respond with one valid JSON object and nothing else. Never wrap the JSO
     };
   }
 
+  if (!createdCareerInsights) {
+    await releaseUsageReservation();
+    return {
+      success: false,
+      error: "Roadmap generation is temporarily unavailable.",
+    };
+  }
+
   revalidatePath(`/roadmap/${createdRoadmapId}`);
   redirect(`/roadmap/${createdRoadmapId}`);
 }
