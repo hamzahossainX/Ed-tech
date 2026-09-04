@@ -314,11 +314,9 @@ export async function generateRoadmap(
       return client.chat.completions.create({
         model: process.env.GROQ_MODEL ?? "openai/gpt-oss-20b",
         temperature: 0.4,
-        // max_tokens is deprecated by Groq; max_completion_tokens is its
-        // supported replacement. Advanced Mode receives the larger budget.
-        max_completion_tokens: isAdvanced
-          ? ADVANCED_MAX_COMPLETION_TOKENS
-          : STANDARD_MAX_COMPLETION_TOKENS,
+        // max_tokens is deprecated by Groq. The supported replacement also
+        // leaves enough room for a complete Advanced Mode JSON document.
+        max_completion_tokens: MAX_COMPLETION_TOKENS,
         // GPT-OSS spends completion tokens on reasoning too. Keeping reasoning
         // low and hidden leaves substantially more room for the roadmap JSON.
         reasoning_effort: "low",
