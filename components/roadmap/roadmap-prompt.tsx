@@ -117,6 +117,7 @@ export function RoadmapPrompt() {
   const [state, action] = useActionState(submitRoadmap, initialState);
   const [prompt, setPrompt] = useState("");
   const [isAdvanced, setIsAdvanced] = useState(false);
+  const [selectedModel, setSelectedModel] = useState("groq-ultra-speed");
   const [limitOpen, setLimitOpen] = useState(false);
   const promptRef = useRef<HTMLTextAreaElement>(null);
 
