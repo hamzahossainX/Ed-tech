@@ -520,5 +520,5 @@ You must respond with one valid JSON object and nothing else. Never wrap the JSO
   }
 
   revalidatePath(`/roadmap/${createdRoadmapId}`);
-  redirect(`/roadmap/${createdRoadmapId}`);
+  redirect(`/roadmap/${createdRoadmapId}?${createCareerInsightsQuery(createdCareerInsights)}`);
 }
