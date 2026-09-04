@@ -34,7 +34,17 @@ body {
     #0a0a0a;
 }
 
-::selection { background: var(--lime); color: var(--ink); }
+::selection {
+  background: #c8ff65;
+  color: #07120b;
+  text-shadow: none;
+}
+
+::-moz-selection {
+  background: #c8ff65;
+  color: #07120b;
+  text-shadow: none;
+}
 
 .focus-scrollbar { scrollbar-width: thin; scrollbar-color: rgba(198, 248, 94, .35) transparent; }
 .focus-scrollbar::-webkit-scrollbar { width: 6px; }
