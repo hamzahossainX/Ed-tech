@@ -384,7 +384,7 @@ You must respond with one valid JSON object and nothing else. Never wrap the JSO
       try {
         parsedContent = JSON.parse(rawContent);
       } catch (parseError) {
-        throw new Error("Groq returned malformed or truncated JSON.", {
+        throw new IncompleteRoadmapGenerationError("Groq returned malformed or truncated JSON.", {
           cause: parseError,
         });
       }
