@@ -182,8 +182,25 @@ function createRoadmapJsonSchema(isAdvanced: boolean) {
         required: ["title", "description", "estimatedDuration", "milestones"],
       }, { type: "null" }],
     },
+    careerInsights: {
+      anyOf: [{
+        type: "object",
+        additionalProperties: false,
+        properties: {
+          marketDemand: { type: "string" },
+          entrySalary: { type: "string" },
+          topRoles: {
+            type: "array",
+            minItems: 1,
+            maxItems: 4,
+            items: { type: "string" },
+          },
+        },
+        required: ["marketDemand", "entrySalary", "topRoles"],
+      }, { type: "null" }],
+    },
   },
-  required: ["isValidTopic", "isPolicyViolation", "violationReason", "isGibberish", "message", "roadmap"],
+  required: ["isValidTopic", "isPolicyViolation", "violationReason", "isGibberish", "message", "roadmap", "careerInsights"],
   } as const;
 }
 
