@@ -467,6 +467,7 @@ You must respond with one valid JSON object and nothing else. Never wrap the JSO
     }
 
     const roadmap = aiResponse.roadmap;
+    createdCareerInsights = aiResponse.careerInsights;
     const milestonesJson = JSON.stringify(roadmap.milestones);
 
     const result = isAdvanced
