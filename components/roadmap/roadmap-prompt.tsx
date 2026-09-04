@@ -121,6 +121,24 @@ export function RoadmapPrompt() {
   const [limitOpen, setLimitOpen] = useState(false);
   const promptRef = useRef<HTMLTextAreaElement>(null);
 
+  const handleVoiceTranscript = useCallback((transcript: string) => {
+    setPrompt(transcript);
+    requestAnimationFrame(() => {
+      promptRef.current?.focus();
+      promptRef.current?.setSelectionRange(transcript.length, transcript.length);
+    });
+  }, []);
+
+  const handleVoiceError = useCallback((message: string) => {
+    toast.warning(message, { duration: 8_000 });
+  }, []);
+
+  const { isListening, isSupported, toggleListening } = useSpeechRecognition({
+    maxLength: 80,
+    onTranscript: handleVoiceTranscript,
+    onError: handleVoiceError,
+  });
+
   useEffect(() => {
     if (state.error === "LIMIT_REACHED") setLimitOpen(true);
   }, [state.error, state.limitReachedAt]);
