@@ -62,12 +62,18 @@ function createAiResponseSchema(isAdvanced: boolean) {
     isGibberish: z.boolean(),
     message: z.string().max(300),
     roadmap: createRoadmapSchema(isAdvanced).nullable(),
+    careerInsights: careerInsightsSchema.nullable(),
   }).refine(
-    (response) => !response.isPolicyViolation || (!response.isValidTopic && response.roadmap === null && response.violationReason !== null),
+    (response) => !response.isPolicyViolation || (!response.isValidTopic && response.roadmap === null && response.careerInsights === null && response.violationReason !== null),
     "Policy violations must include a reason and cannot include a roadmap.",
   ).refine(
-    (response) => !response.isGibberish || (!response.isValidTopic && !response.isPolicyViolation && response.roadmap === null),
+    (response) => !response.isGibberish || (!response.isValidTopic && !response.isPolicyViolation && response.roadmap === null && response.careerInsights === null),
     "Gibberish responses cannot include a roadmap or policy violation.",
+  ).refine(
+    (response) => response.isValidTopic
+      ? response.roadmap !== null && response.careerInsights !== null
+      : response.careerInsights === null,
+    "Career insights are required only for valid educational roadmaps.",
   );
 }
 
