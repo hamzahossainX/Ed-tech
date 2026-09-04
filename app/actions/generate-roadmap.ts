@@ -402,6 +402,13 @@ You must respond with one valid JSON object and nothing else. Never wrap the JSO
       if (!backupApiKey) {
         await releaseUsageReservation();
         console.error("CRITICAL AI ERROR:", primaryError);
+        if (isIncompleteRoadmapGeneration(primaryError)) {
+          return {
+            success: false,
+            error: "GENERATION_INCOMPLETE",
+            isGenerationIncomplete: true,
+          };
+        }
         return {
           success: false,
           error: "The AI service is temporarily unavailable. Please try again shortly.",
