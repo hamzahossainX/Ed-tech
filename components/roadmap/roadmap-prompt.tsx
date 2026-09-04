@@ -75,6 +75,15 @@ async function submitRoadmap(
       return result;
     }
 
+    if (result.isGenerationIncomplete) {
+      toast.warning(INCOMPLETE_GENERATION_MESSAGE, { duration: 20_000 });
+      return {
+        success: false,
+        error: "GENERATION_INCOMPLETE",
+        isGenerationIncomplete: true,
+      };
+    }
+
     if (result.error && result.error !== "LIMIT_REACHED") {
       if (result.isValidationError) {
         toast.warning(ROADMAP_PROMPT_ERROR, { duration: 20_000 });
