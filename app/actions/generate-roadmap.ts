@@ -308,6 +308,7 @@ export async function generateRoadmap(
   }
 
   let createdRoadmapId: string;
+  let createdCareerInsights: CareerInsights | null = null;
   try {
     async function requestRoadmap(client: Groq) {
       return client.chat.completions.create({
