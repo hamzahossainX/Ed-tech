@@ -85,6 +85,7 @@ export type GenerateRoadmapState = {
   isPolicyViolation?: boolean;
   violationReason?: string;
   isGibberish?: boolean;
+  isGenerationIncomplete?: boolean;
   limitReachedAt?: number;
 };
 
