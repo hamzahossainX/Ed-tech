@@ -9,8 +9,10 @@ import { toast } from "sonner";
 import { simplifyMilestone } from "@/app/actions/simplify-milestone";
 import { toggleMilestone } from "@/app/actions/toggle-milestone";
 import { ClaimCertificateDialog } from "@/components/certificate/claim-certificate-dialog";
+import { CareerInsightsWidget } from "@/components/roadmap/career-insights-widget";
 import { RoadmapExportMenu } from "@/components/roadmap/roadmap-export-menu";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import type { CareerInsights } from "@/lib/career-insights";
 import {
   createRoadmapSnapshot,
   persistRoadmapSnapshot,
@@ -21,7 +23,7 @@ import { cn } from "@/lib/utils";
 
 export type TrackerMilestone = RecoverableMilestone;
 
-type Props = { roadmap: { id: string; userName?: string | null; title: string; description: string; estimatedDuration: string; updatedAt: Date | string; milestones: TrackerMilestone[] } };
+type Props = { roadmap: { id: string; userName?: string | null; title: string; description: string; estimatedDuration: string; careerInsights?: CareerInsights | null; updatedAt: Date | string; milestones: TrackerMilestone[] } };
 
 async function celebrateMilestone(isRoadmapComplete: boolean) {
   if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
@@ -166,6 +168,9 @@ export function RoadmapTracker({ roadmap }: Props) {
 
   return (
     <section className="mt-6 overflow-hidden rounded-3xl border border-black/8 bg-white shadow-[0_20px_70px_rgba(23,33,27,.08)] dark:border-white/10 dark:bg-[#111512] dark:shadow-black/30 sm:mt-10 md:rounded-[2rem]">
+      {roadmapForStorage.careerInsights && (
+        <CareerInsightsWidget insights={roadmapForStorage.careerInsights} />
+      )}
       <header className="grid gap-5 border-b border-black/8 p-4 dark:border-white/8 sm:p-6 md:grid-cols-[1fr_auto] md:gap-8 md:p-8 lg:p-10">
         <div>
           <div className="flex flex-wrap items-center justify-between gap-3">
