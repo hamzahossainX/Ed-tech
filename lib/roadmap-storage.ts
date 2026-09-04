@@ -1,4 +1,5 @@
 import type { ResourceLink } from "@/db/schema";
+import type { CareerInsights } from "@/lib/career-insights";
 
 const ACTIVE_ROADMAP_STORAGE_KEY = "learnx:active-roadmap:v1";
 const STORAGE_VERSION = 1;
@@ -24,6 +25,7 @@ export type RecoverableRoadmap = {
   title: string;
   description: string;
   estimatedDuration: string;
+  careerInsights?: CareerInsights | null;
   updatedAt: string;
   milestones: RecoverableMilestone[];
 };
@@ -57,6 +59,20 @@ function isResourceLink(value: unknown): value is ResourceLink {
     && value.url.startsWith("https://");
 }
 
+function isCareerInsights(value: unknown): value is CareerInsights {
+  return isRecord(value)
+    && typeof value.marketDemand === "string"
+    && value.marketDemand.length >= 2
+    && value.marketDemand.length <= 100
+    && typeof value.entrySalary === "string"
+    && value.entrySalary.length >= 2
+    && value.entrySalary.length <= 100
+    && Array.isArray(value.topRoles)
+    && value.topRoles.length >= 1
+    && value.topRoles.length <= 4
+    && value.topRoles.every((role) => typeof role === "string" && role.length >= 2 && role.length <= 80);
+}
+
 function isRecoverableMilestone(value: unknown): value is RecoverableMilestone {
   return isRecord(value)
     && typeof value.id === "string"
@@ -87,6 +103,7 @@ function isStoredRoadmapEnvelope(value: unknown): value is StoredRoadmapEnvelope
     && typeof roadmap.title === "string"
     && typeof roadmap.description === "string"
     && typeof roadmap.estimatedDuration === "string"
+    && (roadmap.careerInsights === undefined || roadmap.careerInsights === null || isCareerInsights(roadmap.careerInsights))
     && typeof roadmap.updatedAt === "string"
     && Number.isFinite(Date.parse(roadmap.updatedAt))
     && Array.isArray(roadmap.milestones)
@@ -101,6 +118,7 @@ export function createRoadmapSnapshot(roadmap: ServerRoadmap): RecoverableRoadma
     title: roadmap.title,
     description: roadmap.description,
     estimatedDuration: roadmap.estimatedDuration,
+    careerInsights: roadmap.careerInsights ?? null,
     updatedAt: new Date(roadmap.updatedAt).toISOString(),
     milestones: roadmap.milestones.map((milestone) => ({
       id: milestone.id,
