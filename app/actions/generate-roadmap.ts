@@ -424,6 +424,16 @@ You must respond with one valid JSON object and nothing else. Never wrap the JSO
           primaryError,
           backupError,
         });
+        if (
+          isIncompleteRoadmapGeneration(primaryError)
+          || isIncompleteRoadmapGeneration(backupError)
+        ) {
+          return {
+            success: false,
+            error: "GENERATION_INCOMPLETE",
+            isGenerationIncomplete: true,
+          };
+        }
         return {
           success: false,
           error: "Both AI services are temporarily unavailable. Please try again shortly.",
