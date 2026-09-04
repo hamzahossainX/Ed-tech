@@ -362,7 +362,7 @@ You must respond with one valid JSON object and nothing else. Never wrap the JSO
 
         if (!choice) throw new Error("Groq returned no completion choice.");
         if (choice.finish_reason === "length") {
-          throw new Error(
+          throw new IncompleteRoadmapGenerationError(
             `Groq truncated the ${isAdvanced ? "advanced" : "standard"} roadmap at the completion-token limit.`,
           );
         }
