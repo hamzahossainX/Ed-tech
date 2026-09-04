@@ -94,8 +94,20 @@ const EDUCATIONAL_REFUSAL_MESSAGE =
 // Keep these limits server-only. The UI intentionally never exposes quota totals.
 const AUTHENTICATED_DAILY_GENERATION_LIMIT = 6;
 const GUEST_DAILY_GENERATION_LIMIT = 3;
-const ADVANCED_MAX_COMPLETION_TOKENS = 7000;
-const STANDARD_MAX_COMPLETION_TOKENS = 5000;
+// Both primary and backup clients call the same request function, so this
+// output budget is applied consistently to either provider attempt.
+const MAX_COMPLETION_TOKENS = 8000;
+
+class IncompleteRoadmapGenerationError extends Error {
+  constructor(message: string, options?: ErrorOptions) {
+    super(message, options);
+    this.name = "IncompleteRoadmapGenerationError";
+  }
+}
+
+function isIncompleteRoadmapGeneration(error: unknown) {
+  return error instanceof IncompleteRoadmapGenerationError;
+}
 
 type UsageReservation =
   | { kind: "authenticated"; userId: string }
