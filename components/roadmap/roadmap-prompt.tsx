@@ -14,6 +14,8 @@ import { ROADMAP_PROMPT_ERROR, roadmapPromptSchema } from "@/lib/roadmap-validat
 const initialState: GenerateRoadmapState = {};
 const BUSY_SERVER_MESSAGE =
   "Servers are currently experiencing high traffic. Please wait a moment and try again.";
+const INCOMPLETE_GENERATION_MESSAGE =
+  "Generation incomplete. The AI response ended too early, so nothing was saved. Please try again.";
 const suggestions = [
   "Full-Stack Next.js Developer in 3 months",
   "Cybersecurity & Bug Bounty basics in 8 weeks",
