@@ -91,24 +91,27 @@ function isRecoverableMilestone(value: unknown): value is RecoverableMilestone {
     && typeof value.isCompleted === "boolean";
 }
 
+export function isRecoverableRoadmap(value: unknown): value is RecoverableRoadmap {
+  return isRecord(value)
+    && typeof value.id === "string"
+    && (value.userName === undefined || isNullableString(value.userName))
+    && typeof value.title === "string"
+    && typeof value.description === "string"
+    && typeof value.estimatedDuration === "string"
+    && (value.careerInsights === undefined || value.careerInsights === null || isCareerInsights(value.careerInsights))
+    && typeof value.updatedAt === "string"
+    && Number.isFinite(Date.parse(value.updatedAt))
+    && Array.isArray(value.milestones)
+    && value.milestones.length > 0
+    && value.milestones.every(isRecoverableMilestone);
+}
+
 function isStoredRoadmapEnvelope(value: unknown): value is StoredRoadmapEnvelope {
   if (!isRecord(value) || value.version !== STORAGE_VERSION || typeof value.savedAt !== "number") {
     return false;
   }
 
-  const roadmap = value.roadmap;
-  return isRecord(roadmap)
-    && typeof roadmap.id === "string"
-    && (roadmap.userName === undefined || isNullableString(roadmap.userName))
-    && typeof roadmap.title === "string"
-    && typeof roadmap.description === "string"
-    && typeof roadmap.estimatedDuration === "string"
-    && (roadmap.careerInsights === undefined || roadmap.careerInsights === null || isCareerInsights(roadmap.careerInsights))
-    && typeof roadmap.updatedAt === "string"
-    && Number.isFinite(Date.parse(roadmap.updatedAt))
-    && Array.isArray(roadmap.milestones)
-    && roadmap.milestones.length > 0
-    && roadmap.milestones.every(isRecoverableMilestone);
+  return isRecoverableRoadmap(value.roadmap);
 }
 
 export function createRoadmapSnapshot(roadmap: ServerRoadmap): RecoverableRoadmap {
