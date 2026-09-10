@@ -155,11 +155,47 @@ export function RoadmapPrompt() {
     <><form action={action} noValidate className="relative overflow-hidden rounded-3xl bg-[#173f2c] p-4 text-white shadow-[0_24px_80px_rgba(23,63,44,.18)] sm:p-6 md:rounded-[2rem] md:p-9">
       <div className="absolute -right-16 -top-20 size-56 rounded-full bg-[#c8ff65]/10 blur-2xl" />
       <div className="relative">
-        <div className="mb-5 flex items-center gap-2 text-xs font-black uppercase tracking-[.2em] text-[#c8ff65]"><Sparkles size={16} /> AI path builder</div>
+        <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center gap-2 text-xs font-black uppercase tracking-[.2em] text-[#c8ff65]"><Sparkles size={16} /> AI path builder</div>
+          <div className="flex items-center gap-2">
+            <Bot className="size-4 shrink-0 text-[#c8ff65]" aria-hidden="true" />
+            <Select value={selectedModel} onValueChange={setSelectedModel}>
+              <SelectTrigger
+                aria-label="Choose AI model"
+                className="w-full min-w-0 sm:w-[13.5rem]"
+              >
+                <SelectValue placeholder="Select AI model" />
+              </SelectTrigger>
+              <SelectContent align="end">
+                {demoModels.map((model) => (
+                  <SelectItem key={model.value} value={model.value}>
+                    {model.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
         <label htmlFor="roadmap-prompt" className="block text-xl font-black tracking-tight sm:text-2xl md:text-3xl">What do you want to become great at?</label>
         <p className="mt-2 max-w-2xl text-sm leading-6 text-white/55">Include your goal, experience level, and available time. LearnX will turn it into a practical path.</p>
         <div className="mt-6 flex w-full flex-col gap-2 rounded-2xl bg-white p-2 md:flex-row md:gap-3">
-          <textarea ref={promptRef} id="roadmap-prompt" name="prompt" value={prompt} onChange={(event) => setPrompt(event.target.value)} required minLength={3} maxLength={80} rows={2} placeholder="I want to learn Python in 3 months..." className="min-h-24 w-full flex-1 resize-none rounded-xl px-3 py-3 text-sm leading-6 text-[#17211b] outline-none placeholder:text-black/35 focus:ring-4 focus:ring-[#c8ff65]/35 sm:px-4 sm:text-[15px] md:min-h-16" />
+          <div className="relative min-w-0 flex-1">
+            <textarea ref={promptRef} id="roadmap-prompt" name="prompt" value={prompt} onChange={(event) => setPrompt(event.target.value)} required minLength={3} maxLength={80} rows={2} placeholder="I want to learn Python in 3 months..." className="min-h-24 w-full resize-none rounded-xl px-3 py-3 pr-14 text-sm leading-6 text-[#17211b] outline-none placeholder:text-black/35 focus:ring-4 focus:ring-[#c8ff65]/35 sm:px-4 sm:pr-14 sm:text-[15px] md:min-h-16" />
+            <button
+              type="button"
+              onClick={toggleListening}
+              aria-label={isListening ? "Stop voice input" : "Dictate learning goal"}
+              aria-pressed={isListening}
+              title={isSupported === false ? "Voice input is not supported by this browser" : isListening ? "Stop listening" : "Use voice input"}
+              className={`absolute right-3 top-1/2 grid size-10 -translate-y-1/2 place-items-center rounded-xl border transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3c7156] ${isListening ? "border-[#3c7156] bg-[#173f2c] text-[#c8ff65] shadow-[0_0_0_4px_rgba(60,113,86,.12)]" : isSupported === false ? "border-black/5 bg-black/[.03] text-black/25" : "border-black/8 bg-[#f2f7ed] text-[#28583f] hover:scale-105 hover:border-[#3c7156]/30 hover:bg-[#e8f4dc]"}`}
+            >
+              {isListening && <span className="absolute inset-1 animate-ping rounded-lg bg-[#c8ff65]/20" aria-hidden="true" />}
+              <Mic className="relative size-4" aria-hidden="true" />
+            </button>
+            <span className="sr-only" role="status" aria-live="polite">
+              {isListening ? "Listening for your learning goal." : ""}
+            </span>
+          </div>
           <SubmitButton isAdvanced={isAdvanced} />
         </div>
         <input type="hidden" name="isAdvanced" value={String(isAdvanced)} />
