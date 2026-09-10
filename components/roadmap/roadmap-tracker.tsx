@@ -11,6 +11,7 @@ import { toggleMilestone } from "@/app/actions/toggle-milestone";
 import { ClaimCertificateDialog } from "@/components/certificate/claim-certificate-dialog";
 import { CareerInsightsWidget } from "@/components/roadmap/career-insights-widget";
 import { RoadmapExportMenu } from "@/components/roadmap/roadmap-export-menu";
+import { RoadmapShareButton } from "@/components/roadmap/roadmap-share-button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import type { CareerInsights } from "@/lib/career-insights";
 import {
@@ -23,7 +24,19 @@ import { cn } from "@/lib/utils";
 
 export type TrackerMilestone = RecoverableMilestone;
 
-type Props = { roadmap: { id: string; userName?: string | null; title: string; description: string; estimatedDuration: string; careerInsights?: CareerInsights | null; updatedAt: Date | string; milestones: TrackerMilestone[] } };
+type Props = {
+  roadmap: {
+    id: string;
+    userName?: string | null;
+    title: string;
+    description: string;
+    estimatedDuration: string;
+    careerInsights?: CareerInsights | null;
+    updatedAt: Date | string;
+    milestones: TrackerMilestone[];
+  };
+  isSharedSnapshot?: boolean;
+};
 
 async function celebrateMilestone(isRoadmapComplete: boolean) {
   if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
@@ -72,7 +85,7 @@ async function celebrateMilestone(isRoadmapComplete: boolean) {
   }
 }
 
-export function RoadmapTracker({ roadmap }: Props) {
+export function RoadmapTracker({ roadmap, isSharedSnapshot = false }: Props) {
   const [isPending, startTransition] = useTransition();
   const serverSnapshot = useMemo(() => createRoadmapSnapshot(roadmap), [roadmap]);
   const [roadmapState, setRoadmapState] = useState(serverSnapshot);
@@ -96,9 +109,18 @@ export function RoadmapTracker({ roadmap }: Props) {
   const [milestones, setOptimistic] = useOptimistic(roadmapState.milestones, (current, update: { id: string; completed: boolean }) => current.map((item) => item.id === update.id ? { ...item, isCompleted: update.completed } : item));
   const completed = milestones.filter((item) => item.isCompleted).length;
   const progress = milestones.length ? Math.round((completed / milestones.length) * 100) : 0;
+  const currentRoadmap = useMemo(() => ({
+    ...roadmapForStorage,
+    milestones: milestones.map((item) => ({
+      ...item,
+      eli5Explanation: eli5ByMilestone[item.id] ?? item.eli5Explanation,
+    })),
+  }), [eli5ByMilestone, milestones, roadmapForStorage]);
 
   useEffect(() => {
-    const recoveredRoadmap = restoreRoadmapSnapshot(serverSnapshot);
+    const recoveredRoadmap = isSharedSnapshot
+      ? serverSnapshot
+      : restoreRoadmapSnapshot(serverSnapshot);
     setRoadmapState(recoveredRoadmap);
     setEli5ByMilestone(Object.fromEntries(
       recoveredRoadmap.milestones
@@ -106,7 +128,7 @@ export function RoadmapTracker({ roadmap }: Props) {
         .map((item) => [item.id, item.eli5Explanation as string[]]),
     ));
     setStorageReady(true);
-  }, [serverSnapshot]);
+  }, [isSharedSnapshot, serverSnapshot]);
 
   useEffect(() => {
     if (storageReady) persistRoadmapSnapshot(roadmapForStorage);
@@ -118,7 +140,7 @@ export function RoadmapTracker({ roadmap }: Props) {
     startTransition(async () => {
       setOptimistic({ id: item.id, completed: next });
       try {
-        await toggleMilestone(item.id, next);
+        if (!isSharedSnapshot) await toggleMilestone(item.id, next);
         setRoadmapState((current) => ({
           ...current,
           updatedAt: new Date().toISOString(),
@@ -175,16 +197,10 @@ export function RoadmapTracker({ roadmap }: Props) {
         <div>
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[.16em] text-[#3c7156] dark:text-[#a9e950] sm:text-xs sm:tracking-[.2em]"><BadgeCheck size={16} /> Your personal path</div>
-            <RoadmapExportMenu
-              disabled={isPending}
-              roadmap={{
-                ...roadmapForStorage,
-                milestones: milestones.map((item) => ({
-                  ...item,
-                  eli5Explanation: eli5ByMilestone[item.id] ?? item.eli5Explanation,
-                })),
-              }}
-            />
+            <div className="flex flex-wrap items-center justify-end gap-2">
+              <RoadmapShareButton disabled={isPending} roadmap={currentRoadmap} />
+              <RoadmapExportMenu disabled={isPending} roadmap={currentRoadmap} />
+            </div>
           </div>
           <h2 className="mt-3 break-words text-2xl font-black tracking-[-.04em] sm:text-3xl md:text-4xl">{roadmapState.title}</h2>
           <p className="mt-3 max-w-2xl text-sm leading-6 text-black/50 dark:text-white/55 sm:text-base sm:leading-7">{roadmapState.description}</p>
@@ -212,7 +228,9 @@ export function RoadmapTracker({ roadmap }: Props) {
             </motion.li>
           ))}
         </ol>
-        <ClaimCertificateDialog roadmapId={roadmapState.id} isComplete={progress === 100 && milestones.length > 0} claimedName={roadmapState.userName} />
+        {!isSharedSnapshot && (
+          <ClaimCertificateDialog roadmapId={roadmapState.id} isComplete={progress === 100 && milestones.length > 0} claimedName={roadmapState.userName} />
+        )}
       </div>
       <Dialog open={Boolean(activeMilestone)} onOpenChange={(open) => { if (!open) setActiveMilestone(null); }}>
         <DialogContent overlayClassName="bg-black/40 backdrop-blur-md" className="flex max-h-[85vh] w-[95vw] max-w-4xl flex-col overflow-hidden rounded-3xl border-slate-800 bg-slate-950/90 p-0 text-slate-100 shadow-[0_32px_120px_rgba(0,0,0,.6)] backdrop-blur-xl md:p-0">
@@ -228,7 +246,7 @@ export function RoadmapTracker({ roadmap }: Props) {
                 <DialogDescription className="text-slate-400">
                   {activeMilestone.description} · {activeMilestone.duration}
                 </DialogDescription>
-                <button
+                {(!isSharedSnapshot || eli5ByMilestone[activeMilestone.id]) && <button
                   type="button"
                   onClick={() => handleSimplify(activeMilestone)}
                   disabled={
@@ -249,7 +267,7 @@ export function RoadmapTracker({ roadmap }: Props) {
                     : eli5ByMilestone[activeMilestone.id]
                       ? "Simplified (ELI5)"
                       : "Simplify it (ELI5)"}
-                </button>
+                </button>}
               </DialogHeader>
               <div className="focus-scrollbar min-h-0 flex-1 overflow-y-auto px-5 py-7 sm:px-8 sm:py-9">
                 {eli5ByMilestone[activeMilestone.id] && (
