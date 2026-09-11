@@ -20,6 +20,7 @@ import {
   type CareerInsights,
 } from "@/lib/career-insights";
 import { getOrCreateGuestId } from "@/lib/guest";
+import { isAdminEmail } from "@/lib/admin";
 import { ROADMAP_PROMPT_ERROR, roadmapPromptSchema } from "@/lib/roadmap-validation";
 
 const milestoneSchema = z.object({
@@ -91,7 +92,7 @@ export type GenerateRoadmapState = {
 const EDUCATIONAL_REFUSAL_MESSAGE =
   "I am an educational AI. Please enter a valid skill, subject, or career path you want to learn.";
 // Keep these limits server-only. The UI intentionally never exposes quota totals.
-const AUTHENTICATED_DAILY_GENERATION_LIMIT = 6;
+const AUTHENTICATED_DAILY_GENERATION_LIMIT = 5;
 const GUEST_DAILY_GENERATION_LIMIT = 3;
 const MAX_COMPLETION_TOKENS = 8000;
 const GROQ_ATTEMPT_TIMEOUT_MS = 11_000;
@@ -249,7 +250,7 @@ export async function generateRoadmap(
         columns: { id: true, role: true },
       })
     : null;
-  const isAdmin = signedInUser?.role === "admin";
+  const isAdmin = signedInUser?.role === "admin" || isAdminEmail(session?.user?.email);
   const guestUsageId = !isAdmin && !signedInUser
     ? `guest:${await getOrCreateGuestId()}`
     : null;
