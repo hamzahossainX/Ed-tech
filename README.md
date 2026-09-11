@@ -130,6 +130,35 @@ and the authorization callback URL to
 `http://localhost:3000/api/auth/callback/github`. Create a separate OAuth App
 for production with `https://your-domain.com/api/auth/callback/github`.
 
+### GitHub sign-in on Vercel
+
+Deployed at `https://ed-tech-beryl-rho.vercel.app`. To make GitHub sign-in work
+there:
+
+1. **Set the environment variables in the Vercel project** (Settings →
+   Environment Variables, Production scope), not in `.env.local` — that file is
+   gitignored and never reaches the deployment: `DATABASE_URL`, `AUTH_SECRET`,
+   `GITHUB_ID`, `GITHUB_SECRET`, the `GROQ_API_KEY_*` keys, `GEMINI_API_KEY`,
+   and `ADMIN_EMAILS`.
+2. **Register the production callback URL** on a GitHub OAuth App:
+   `https://ed-tech-beryl-rho.vercel.app/api/auth/callback/github`, with the
+   homepage URL set to `https://ed-tech-beryl-rho.vercel.app`. GitHub matches
+   this exactly, so a trailing slash or an `http://` scheme will fail.
+3. **Leave `AUTH_URL` unset on Vercel**, or set it to
+   `https://ed-tech-beryl-rho.vercel.app`. `trustHost` is enabled, so the origin
+   is detected from the request. Never copy the localhost value into Vercel.
+4. **Redeploy** after adding variables. Vercel bakes them in at build time, so
+   existing deployments do not pick them up.
+
+Preview deployments get a different URL on every push, which will not match the
+registered callback, so GitHub sign-in only works on production and on
+`localhost` unless you register those URLs too.
+
+If `GITHUB_ID` or `GITHUB_SECRET` is missing, the GitHub provider is skipped and
+the sign-in page shows email/password only. Auth.js validates every registered
+provider when `/api/auth` boots, so registering GitHub with empty credentials
+would return 500 for *every* auth route and break email/password sign-in too.
+
 Email/password accounts use bcrypt hashes with a cost factor of 12. Passwords
 must be 8–72 characters and contain an uppercase letter, number, and special
 character. Install the credentials dependencies with:
