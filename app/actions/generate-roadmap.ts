@@ -110,6 +110,31 @@ function isIncompleteRoadmapGeneration(error: unknown) {
   return error instanceof IncompleteRoadmapGenerationError;
 }
 
+type GeminiGenerateContentResponse = {
+  candidates?: Array<{
+    finishReason?: string;
+    content?: {
+      parts?: Array<{ text?: string }>;
+    };
+  }>;
+  promptFeedback?: {
+    blockReason?: string;
+  };
+};
+
+function getProviderErrorSummary(error: unknown) {
+  if (!(error instanceof Error)) return { name: "UnknownError" };
+
+  const status = "status" in error && typeof error.status === "number"
+    ? error.status
+    : undefined;
+  return {
+    name: error.name,
+    message: error.message.slice(0, 240),
+    ...(status ? { status } : {}),
+  };
+}
+
 type UsageReservation =
   | { kind: "authenticated"; userId: string }
   | { kind: "guest"; usageId: string };
