@@ -71,7 +71,9 @@ The roadmap flow uses two tables:
 - `ai_roadmaps` stores the prompt, generated title, description, and estimated duration.
 - `roadmap_milestones` stores ordered steps, resource links, completion state, and completion time. Resource links are typed JSONB objects with a title and HTTPS URL.
 
-Deleting a roadmap deletes its milestones through the database foreign key. The roadmap has no user foreign key because the application does not currently have authentication.
+Deleting a roadmap deletes its milestones through the database foreign key. The roadmap still has no user foreign key, so a roadmap is not owned by the learner who generated it. Generation and every mutation now require a session, but ownership checks need that column before they can be added.
+
+Per-learner generation usage lives on `users` as `daily_generation_count` and `last_generation_date`.
 
 ## Prerequisites
 
@@ -199,15 +201,35 @@ npm run db:migrate
 
 Commit the schema file, generated SQL, and Drizzle metadata together. Do not edit a migration after it has been applied to a shared database.
 
+## Access and limits
+
+Generating a roadmap requires a signed-in learner. The hero form blocks a
+signed-out submit before the button can enter its loading state and opens a
+dialog offering sign-in, but that is only there to avoid a pointless round
+trip: the Server Action checks the session itself, before it parses the prompt
+or reaches a provider. There is no guest allowance.
+
+A signed-in learner may generate **5 roadmaps per day**. The count and the date
+live on the `users` row, and one atomic `UPDATE ... RETURNING` reads the count,
+checks the cap, and increments it in a single statement, so two concurrent
+submits cannot both slip past the fifth. The day boundary is Asia/Dhaka, and a
+generation that fails before a roadmap is saved hands its slot back.
+
+Emails listed in `ADMIN_EMAILS`, and users whose row has the `admin` role,
+bypass the cap.
+
 ## Security model
 
-Roadmaps are public by UUID. There is no separate edit credential, so possession of the URL grants read and update access. This is deliberate for the hackathon demo.
+Roadmaps are public by UUID, and possession of the URL grants read access.
+
+Every Server Action requires a session, because a Server Action is a public
+HTTP endpoint whether or not the UI calls it. What is **not** yet enforced is
+ownership: `ai_roadmaps` has no user column, so any signed-in learner who knows
+a roadmap UUID can toggle its milestones or claim its certificate.
 
 Before using LearnX for private or multi-user data:
 
-- add authentication or a separate hashed edit token;
-- enforce authorization inside every mutation;
-- add rate limiting to roadmap generation;
+- add a user column to `ai_roadmaps` and check ownership inside every mutation;
 - validate upload type and size if Cloudinary uploads are enabled;
 - rotate any credential that has been copied into logs, chat, or source control.
 
