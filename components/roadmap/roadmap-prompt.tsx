@@ -2,7 +2,7 @@
 
 import { useActionState, useCallback, useEffect, useRef, useState } from "react";
 import { useFormStatus } from "react-dom";
-import { ArrowUpRight, Bot, Mic, Sparkles } from "lucide-react";
+import { ArrowUpRight, Bot, Mic, ShieldCheck, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { generateRoadmap, type GenerateRoadmapState } from "@/app/actions/generate-roadmap";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
