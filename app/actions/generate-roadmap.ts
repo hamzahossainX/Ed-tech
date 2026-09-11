@@ -415,10 +415,7 @@ You must respond with one valid JSON object and nothing else. Never wrap the JSO
         const rejectedGeneration = getRejectedGeneration(requestError);
         if (!rejectedGeneration) throw requestError;
 
-        // Groq may reject a mostly valid structured response before returning a
-        // completion. Recovery is safe because it still has to pass JSON.parse,
-        // resource normalization, and the complete application Zod schema.
-        console.warn("Groq rejected its structured payload; validating the recoverable response locally.");
+        console.warn(`${provider} returned a recoverable structured payload; validating it locally.`);
         rawContent = rejectedGeneration;
       }
 
