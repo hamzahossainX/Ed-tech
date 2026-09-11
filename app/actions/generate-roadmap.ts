@@ -471,56 +471,85 @@ You must respond with one valid JSON object and nothing else. Never wrap the JSO
           : "Gemini returned no completion candidate.");
       }
 
-      return createAiResponseSchema(isAdvanced).parse(parsedContent);
+      if (candidate.finishReason === "MAX_TOKENS") {
+        throw new IncompleteRoadmapGenerationError(
+          `Gemini truncated the ${isAdvanced ? "advanced" : "standard"} roadmap at the output-token limit.`,
+        );
+      }
+
+      const rawContent = candidate.content?.parts
+        ?.map((part) => part.text ?? "")
+        .join("") ?? "";
+      return parseAndValidateRoadmap(rawContent, "Gemini");
     }
 
-    let aiResponse;
-    try {
-      aiResponse = await requestAndValidateRoadmap(getGroq());
-    } catch (primaryError) {
-      console.warn("Primary API failed, switching to backup...", primaryError);
+    const providerFailures: Array<{ provider: string; error: unknown }> = [];
+    const seenGroqKeys = new Set<string>();
+    let aiResponse: ReturnType<typeof parseAndValidateRoadmap> | undefined;
+    const groqTiers = [
+      { provider: "Groq tier 1", apiKey: process.env.GROQ_API_KEY_1 },
+      { provider: "Groq tier 2", apiKey: process.env.GROQ_API_KEY_2 },
+      { provider: "Groq tier 3", apiKey: process.env.GROQ_API_KEY_3 },
+    ] as const;
 
-      const backupApiKey = process.env.GROQ_BACKUP_API_KEY;
-      if (!backupApiKey) {
-        await releaseUsageReservation();
-        console.error("CRITICAL AI ERROR:", primaryError);
-        if (isIncompleteRoadmapGeneration(primaryError)) {
-          return {
-            success: false,
-            error: "GENERATION_INCOMPLETE",
-            isGenerationIncomplete: true,
-          };
-        }
-        return {
-          success: false,
-          error: "The AI service is temporarily unavailable. Please try again shortly.",
-        };
+    for (const tier of groqTiers) {
+      const apiKey = tier.apiKey?.trim();
+      if (!apiKey) {
+        console.warn(`${tier.provider} is not configured; skipping it.`);
+        continue;
       }
+      if (seenGroqKeys.has(apiKey)) {
+        console.warn(`${tier.provider} duplicates an earlier key; skipping it.`);
+        continue;
+      }
+      seenGroqKeys.add(apiKey);
 
       try {
-        const backupClient = new Groq({ apiKey: backupApiKey });
-        aiResponse = await requestAndValidateRoadmap(backupClient);
-      } catch (backupError) {
-        await releaseUsageReservation();
-        console.error("CRITICAL AI ERROR:", {
-          primaryError,
-          backupError,
-        });
-        if (
-          isIncompleteRoadmapGeneration(primaryError)
-          || isIncompleteRoadmapGeneration(backupError)
-        ) {
-          return {
-            success: false,
-            error: "GENERATION_INCOMPLETE",
-            isGenerationIncomplete: true,
-          };
+        aiResponse = await requestGroqRoadmap(new Groq({ apiKey }), tier.provider);
+        break;
+      } catch (error) {
+        providerFailures.push({ provider: tier.provider, error });
+        console.warn(`${tier.provider} failed; trying the next provider.`, getProviderErrorSummary(error));
+      }
+    }
+
+    if (!aiResponse) {
+      const geminiApiKey = process.env.GEMINI_API_KEY?.trim();
+      if (!geminiApiKey) {
+        console.warn("Gemini is not configured; no providers remain.");
+      } else {
+        try {
+          aiResponse = await requestGeminiRoadmap(geminiApiKey);
+        } catch (error) {
+          providerFailures.push({ provider: "Gemini", error });
+          console.error("Gemini fallback failed; all configured AI providers are unavailable.", {
+            provider: "Gemini",
+            error: getProviderErrorSummary(error),
+          });
         }
+      }
+    }
+
+    if (!aiResponse) {
+      await releaseUsageReservation();
+      const failureSummary = providerFailures.map(({ provider, error }) => ({
+        provider,
+        error: getProviderErrorSummary(error),
+      }));
+      console.error("CRITICAL AI ERROR: all roadmap providers failed.", failureSummary);
+
+      if (providerFailures.some(({ error }) => isIncompleteRoadmapGeneration(error))) {
         return {
           success: false,
-          error: "Both AI services are temporarily unavailable. Please try again shortly.",
+          error: "GENERATION_INCOMPLETE",
+          isGenerationIncomplete: true,
         };
       }
+
+      return {
+        success: false,
+        error: "The AI service is temporarily unavailable. Please try again shortly.",
+      };
     }
 
     if (aiResponse.isPolicyViolation) {
