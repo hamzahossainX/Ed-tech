@@ -364,7 +364,13 @@ You must respond with one valid JSON object and nothing else. Never wrap the JSO
       );
     }
 
-    async function requestAndValidateRoadmap(client: Groq) {
+    return aiResponseSchema.parse(parsedContent);
+  }
+
+  let createdRoadmapId: string;
+  let createdCareerInsights: CareerInsights | null = null;
+  try {
+    async function requestGroqRoadmap(client: Groq, provider: string) {
       let rawContent: string;
 
       try {
