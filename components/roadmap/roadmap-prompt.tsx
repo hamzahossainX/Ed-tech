@@ -200,10 +200,23 @@ export function RoadmapPrompt() {
           <SubmitButton isAdvanced={isAdvanced} />
         </div>
         <input type="hidden" name="isAdvanced" value={String(isAdvanced)} />
-        <label htmlFor="advanced-mode" className="mt-4 flex cursor-pointer items-center justify-between gap-4 rounded-2xl border border-white/10 bg-white/5 px-4 py-3 transition hover:border-[#c8ff65]/30 hover:bg-white/8">
-          <span className="min-w-0"><span className="block text-sm font-bold text-white">Advanced Mode</span><span className="mt-0.5 block text-xs leading-5 text-white/50">Deep Dive &amp; Interview Prep</span></span>
-          <Switch id="advanced-mode" checked={isAdvanced} onCheckedChange={setIsAdvanced} aria-label="Advanced Mode: Deep Dive and Interview Prep" />
-        </label>
+        <input type="hidden" name="securityFocus" value={String(isSecurityFocused)} />
+        <div className="mt-4 grid gap-3 sm:grid-cols-2">
+          <div className="flex items-center justify-between gap-4 rounded-2xl border border-white/10 bg-white/5 px-4 py-3 transition hover:border-[#c8ff65]/30 hover:bg-white/8">
+            <label htmlFor="advanced-mode" className="min-w-0 flex-1 cursor-pointer"><span className="block text-sm font-bold text-white">Advanced Mode</span><span className="mt-0.5 block text-xs leading-5 text-white/50">Deep Dive &amp; Interview Prep</span></label>
+            <Switch id="advanced-mode" checked={isAdvanced} onCheckedChange={setIsAdvanced} aria-label="Advanced Mode: Deep Dive and Interview Prep" />
+          </div>
+          <div className="flex items-center justify-between gap-4 rounded-2xl border border-white/10 bg-white/5 px-4 py-3 transition hover:border-[#c8ff65]/30 hover:bg-white/8">
+            <label htmlFor="security-focus" className="flex min-w-0 flex-1 cursor-pointer items-start gap-3">
+              <ShieldCheck className="mt-0.5 size-4 shrink-0 text-[#c8ff65]" aria-hidden="true" />
+              <span>
+                <span className="block text-sm font-bold text-white">Security Focus</span>
+                <span className="mt-0.5 block text-xs leading-5 text-white/50">Secure coding &amp; OWASP guidance</span>
+              </span>
+            </label>
+            <Switch id="security-focus" checked={isSecurityFocused} onCheckedChange={setIsSecurityFocused} aria-label="Security Focus: secure coding and OWASP guidance" />
+          </div>
+        </div>
         <div className="mt-4 flex max-w-full flex-wrap items-center gap-2 text-xs text-white/45"><span className="mr-1 font-semibold text-white/55">Try:</span>{suggestions.map((suggestion) => <button key={suggestion} type="button" onClick={() => selectSuggestion(suggestion)} aria-label={`Use prompt: ${suggestion}`} className="max-w-full break-words rounded-full border border-white/15 px-3 py-2 text-left leading-4 text-white/65 transition hover:-translate-y-0.5 hover:border-[#c8ff65]/50 hover:bg-[#c8ff65]/10 hover:text-[#c8ff65] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#c8ff65]">{suggestion}</button>)}</div>
       </div>
     </form><Dialog open={limitOpen} onOpenChange={setLimitOpen}><DialogContent className="max-w-md border-white/10 bg-[#fffefa] dark:bg-[#111512] dark:text-white"><DialogHeader><div className="mb-3 grid size-14 place-items-center rounded-2xl bg-[#c8ff65] text-2xl shadow-[0_0_35px_rgba(200,255,101,.25)]">🚀</div><DialogTitle>Daily Limit Reached</DialogTitle><DialogDescription className="dark:text-white/55">You have reached your daily generation limit to ensure fair usage. Please come back tomorrow (resets at midnight) to generate more roadmaps!</DialogDescription></DialogHeader><button type="button" onClick={() => setLimitOpen(false)} className="mt-5 min-h-11 w-full rounded-xl bg-[#173f2c] px-5 font-black text-white transition hover:bg-[#21573d] dark:bg-[#c8ff65] dark:text-[#17211b]">Got it</button></DialogContent></Dialog></>
