@@ -8,6 +8,20 @@ import { db } from "@/db";
 import { accounts, sessions, users, verificationTokens } from "@/db/schema";
 import { loginSchema } from "@/lib/auth-validation";
 
+const githubId = process.env.GITHUB_ID;
+const githubSecret = process.env.GITHUB_SECRET;
+
+/**
+ * Whether GitHub sign-in is configured in this environment.
+ *
+ * Auth.js validates every registered provider when the /api/auth handler boots,
+ * and a GitHub provider holding undefined credentials makes the whole config
+ * invalid — which takes down credentials sign-in with it. Registering GitHub
+ * only when its keys are present means a missing key costs the GitHub button,
+ * not every route under /api/auth.
+ */
+export const isGithubAuthEnabled = Boolean(githubId && githubSecret);
+
 export const { handlers, auth, signIn, signOut } = NextAuth({
   secret: process.env.AUTH_SECRET,
   trustHost: true,
@@ -19,10 +33,9 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   }),
   session: { strategy: "jwt" },
   providers: [
-    GitHub({
-      clientId: process.env.GITHUB_ID,
-      clientSecret: process.env.GITHUB_SECRET,
-    }),
+    ...(isGithubAuthEnabled
+      ? [GitHub({ clientId: githubId, clientSecret: githubSecret })]
+      : []),
     Credentials({
       credentials: {
         email: { label: "Email", type: "email" },
