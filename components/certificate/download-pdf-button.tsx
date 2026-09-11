@@ -2,17 +2,30 @@
 
 import { useState } from "react";
 import { Download, LoaderCircle } from "lucide-react";
+import { CertificateShareDialog } from "@/components/certificate/certificate-share-dialog";
 
 type DownloadPDFButtonProps = {
   targetId: string;
+  roadmapTitle: string;
+  roadmapDuration: string;
+  viewerKey: string;
+  isAdmin: boolean;
   fileName?: string;
 };
 
+const CERTIFICATE_WIDTH = 1120;
+const CERTIFICATE_HEIGHT = 792;
+
 export function DownloadPDFButton({
   targetId,
+  roadmapTitle,
+  roadmapDuration,
+  viewerKey,
+  isAdmin,
   fileName = "LearnX-Certificate.pdf",
 }: DownloadPDFButtonProps) {
   const [isGenerating, setIsGenerating] = useState(false);
+  const [shareOpen, setShareOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   async function handleDownload() {
@@ -29,7 +42,7 @@ export function DownloadPDFButton({
     try {
       // Capture only after web fonts finish loading. This prevents text from
       // moving between measurement and canvas rendering.
-      await document.fonts?.ready;
+      await document.fonts.ready;
 
       const [{ default: html2canvas }, { default: jsPDF }] = await Promise.all([
         import("html2canvas"),
@@ -41,6 +54,32 @@ export function DownloadPDFButton({
         useCORS: true,
         allowTaint: true,
         backgroundColor: "#ffffff",
+        width: CERTIFICATE_WIDTH,
+        height: CERTIFICATE_HEIGHT,
+        windowWidth: CERTIFICATE_WIDTH,
+        windowHeight: CERTIFICATE_HEIGHT,
+        scrollX: 0,
+        scrollY: 0,
+        logging: false,
+        onclone: (clonedDocument) => {
+          const clonedCertificate = clonedDocument.getElementById(targetId);
+          if (!clonedCertificate) return;
+
+          // Render an isolated, fixed-size A4-landscape canvas regardless of
+          // the user's viewport. This avoids responsive reflow and clipping.
+          Object.assign(clonedCertificate.style, {
+            width: `${CERTIFICATE_WIDTH}px`,
+            height: `${CERTIFICATE_HEIGHT}px`,
+            minWidth: `${CERTIFICATE_WIDTH}px`,
+            maxWidth: `${CERTIFICATE_WIDTH}px`,
+            minHeight: `${CERTIFICATE_HEIGHT}px`,
+            maxHeight: `${CERTIFICATE_HEIGHT}px`,
+            aspectRatio: "auto",
+            margin: "0",
+            transform: "none",
+          });
+          clonedCertificate.setAttribute("data-pdf-capture", "true");
+        },
       });
 
       if (!canvas.width || !canvas.height) {
@@ -79,8 +118,11 @@ export function DownloadPDFButton({
         "FAST",
       );
       pdf.save(fileName.endsWith(".pdf") ? fileName : `${fileName}.pdf`);
+      setShareOpen(true);
     } catch (cause) {
-      console.error("Certificate PDF generation failed:", cause);
+      if (process.env.NODE_ENV !== "production") {
+        console.error("Certificate PDF generation failed:", cause);
+      }
       setError(
         cause instanceof Error
           ? `PDF generation failed: ${cause.message}`
@@ -91,7 +133,7 @@ export function DownloadPDFButton({
     }
   }
 
-  return (
+  return <>
     <div className="flex min-w-0 flex-col items-end gap-2">
       <button
         type="button"
@@ -113,5 +155,13 @@ export function DownloadPDFButton({
         </p>
       )}
     </div>
-  );
+    <CertificateShareDialog
+      open={shareOpen}
+      onOpenChange={setShareOpen}
+      roadmapTitle={roadmapTitle}
+      roadmapDuration={roadmapDuration}
+      viewerKey={viewerKey}
+      isAdmin={isAdmin}
+    />
+  </>;
 }
