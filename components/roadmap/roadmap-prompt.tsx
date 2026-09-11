@@ -2,7 +2,7 @@
 
 import { type FormEvent, useActionState, useCallback, useEffect, useRef, useState } from "react";
 import { useFormStatus } from "react-dom";
-import { ArrowUpRight, Bot, Mic, ShieldCheck, Sparkles } from "lucide-react";
+import { ArrowUpRight, Mic, ShieldCheck, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { generateRoadmap, type GenerateRoadmapState } from "@/app/actions/generate-roadmap";
 import { LoginRequiredDialog } from "@/components/roadmap/login-required-dialog";
@@ -199,29 +199,26 @@ export function RoadmapPrompt({ isAuthenticated }: RoadmapPromptProps) {
     <><form action={action} onSubmit={handleSubmit} noValidate className="relative overflow-hidden rounded-3xl bg-[#173f2c] p-4 text-white shadow-[0_24px_80px_rgba(23,63,44,.18)] sm:p-6 md:rounded-[2rem] md:p-9">
       <div className="absolute -right-16 -top-20 size-56 rounded-full bg-[#c8ff65]/10 blur-2xl" />
       <div className="relative">
-        <div className="mb-5 flex items-center justify-between gap-3">
-          <div className="flex shrink-0 items-center gap-2 text-xs font-black uppercase tracking-[.2em] text-[#c8ff65]"><Sparkles size={16} /> <span className="hidden min-[390px]:inline">AI path builder</span><span className="min-[390px]:hidden">AI builder</span></div>
-          <div className="flex min-w-0 items-center gap-2">
-            <Bot className="size-4 shrink-0 text-[#c8ff65]" aria-hidden="true" />
-            <Select value={selectedModel} onValueChange={setSelectedModel}>
-              <SelectTrigger
-                aria-label="Choose AI model"
-                className="w-[min(13.5rem,58vw)] min-w-0"
-              >
-                <SelectValue placeholder="Select AI model" />
-              </SelectTrigger>
-              <SelectContent align="end">
-                {demoModels.map((model) => (
-                  <SelectItem key={model.value} value={model.value}>
-                    {model.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
+        <div className="mb-5 flex items-center gap-2 text-xs font-black uppercase tracking-[.2em] text-[#c8ff65]"><Sparkles size={16} /> <span className="hidden min-[390px]:inline">AI path builder</span><span className="min-[390px]:hidden">AI builder</span></div>
         <label htmlFor="roadmap-prompt" className="block text-xl font-black tracking-tight sm:text-2xl md:text-3xl">What do you want to become great at?</label>
-        <p className="mt-2 max-w-2xl text-sm leading-6 text-white/55">Include your goal, experience level, and available time. LearnX will turn it into a practical path.</p>
+        <div className="mt-2 flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
+          <p className="max-w-2xl text-sm leading-6 text-white/55">Include your goal, experience level, and available time. LearnX will turn it into a practical path.</p>
+          <Select value={selectedModel} onValueChange={setSelectedModel}>
+            <SelectTrigger
+              aria-label="Choose AI model"
+              className="w-full min-w-0 sm:w-[13.5rem] sm:shrink-0"
+            >
+              <SelectValue placeholder="Select AI model" />
+            </SelectTrigger>
+            <SelectContent align="end">
+              {demoModels.map((model) => (
+                <SelectItem key={model.value} value={model.value}>
+                  {model.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
         <div className="mt-6 flex w-full flex-col gap-2 rounded-2xl bg-white p-2 md:flex-row md:gap-3">
           <div className="relative min-w-0 flex-1">
             <textarea ref={promptRef} id="roadmap-prompt" name="prompt" value={prompt} onChange={(event) => setPrompt(event.target.value)} required minLength={3} maxLength={80} rows={2} placeholder="I want to learn Python in 3 months..." className="min-h-24 w-full resize-none rounded-xl px-3 py-3 pr-16 text-sm leading-6 text-[#17211b] outline-none placeholder:text-black/35 focus:ring-4 focus:ring-[#c8ff65]/35 sm:px-4 sm:pr-16 sm:text-[15px] md:min-h-16" />
