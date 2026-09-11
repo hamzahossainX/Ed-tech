@@ -1,14 +1,20 @@
 "use client";
 
-import { useActionState, useCallback, useEffect, useRef, useState } from "react";
+import { type FormEvent, useActionState, useCallback, useEffect, useRef, useState } from "react";
 import { useFormStatus } from "react-dom";
 import { ArrowUpRight, Bot, Mic, ShieldCheck, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { generateRoadmap, type GenerateRoadmapState } from "@/app/actions/generate-roadmap";
+import { LoginRequiredDialog } from "@/components/roadmap/login-required-dialog";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { useSpeechRecognition } from "@/hooks/use-speech-recognition";
+import {
+  AUTH_REQUIRED_ERROR,
+  DAILY_LIMIT_MESSAGE,
+  LIMIT_REACHED_ERROR,
+} from "@/lib/roadmap-access";
 import { ROADMAP_PROMPT_ERROR, roadmapPromptSchema } from "@/lib/roadmap-validation";
 
 const initialState: GenerateRoadmapState = {};
@@ -84,7 +90,11 @@ async function submitRoadmap(
       };
     }
 
-    if (result.error && result.error !== "LIMIT_REACHED") {
+    if (
+      result.error
+      && result.error !== LIMIT_REACHED_ERROR
+      && result.error !== AUTH_REQUIRED_ERROR
+    ) {
       if (result.isValidationError) {
         toast.warning(ROADMAP_PROMPT_ERROR, { duration: 20_000 });
         return {
@@ -113,13 +123,30 @@ async function submitRoadmap(
   }
 }
 
-export function RoadmapPrompt() {
-  const [state, action] = useActionState(submitRoadmap, initialState);
+type RoadmapPromptProps = { isAuthenticated: boolean };
+
+export function RoadmapPrompt({ isAuthenticated }: RoadmapPromptProps) {
+  // Second of two gates on the client. `handleSubmit` stops the event before
+  // React starts the action, which is what keeps the button out of its pending
+  // state; this wrapper guarantees no Server Action call is ever issued from a
+  // signed-out client even if a submit reaches it another way. Neither is a
+  // security boundary — the Server Action checks the session itself.
+  const guardedSubmit = useCallback(
+    async (previousState: GenerateRoadmapState, formData: FormData) => {
+      if (!isAuthenticated) {
+        return { success: false, error: AUTH_REQUIRED_ERROR, authRequiredAt: Date.now() };
+      }
+      return submitRoadmap(previousState, formData);
+    },
+    [isAuthenticated],
+  );
+  const [state, action] = useActionState(guardedSubmit, initialState);
   const [prompt, setPrompt] = useState("");
   const [isAdvanced, setIsAdvanced] = useState(false);
   const [isSecurityFocused, setIsSecurityFocused] = useState(false);
   const [selectedModel, setSelectedModel] = useState("groq-ultra-speed");
   const [limitOpen, setLimitOpen] = useState(false);
+  const [loginOpen, setLoginOpen] = useState(false);
   const promptRef = useRef<HTMLTextAreaElement>(null);
 
   const handleVoiceTranscript = useCallback((transcript: string) => {
@@ -141,8 +168,24 @@ export function RoadmapPrompt() {
   });
 
   useEffect(() => {
-    if (state.error === "LIMIT_REACHED") setLimitOpen(true);
+    if (state.error === LIMIT_REACHED_ERROR) setLimitOpen(true);
   }, [state.error, state.limitReachedAt]);
+
+  // Covers the case where the session expires between page render and submit:
+  // the server rejects it and the same dialog opens. The timestamp is in the
+  // dependency list so a repeat attempt reopens a dialog the learner dismissed.
+  useEffect(() => {
+    if (state.error === AUTH_REQUIRED_ERROR) setLoginOpen(true);
+  }, [state.error, state.authRequiredAt]);
+
+  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    if (isAuthenticated) return;
+
+    // Preventing the default stops React from invoking the form action at all,
+    // so the button never spins for a request that cannot succeed.
+    event.preventDefault();
+    setLoginOpen(true);
+  }
 
   function selectSuggestion(suggestion: string) {
     setPrompt(suggestion);
@@ -153,7 +196,7 @@ export function RoadmapPrompt() {
   }
 
   return (
-    <><form action={action} noValidate className="relative overflow-hidden rounded-3xl bg-[#173f2c] p-4 text-white shadow-[0_24px_80px_rgba(23,63,44,.18)] sm:p-6 md:rounded-[2rem] md:p-9">
+    <><form action={action} onSubmit={handleSubmit} noValidate className="relative overflow-hidden rounded-3xl bg-[#173f2c] p-4 text-white shadow-[0_24px_80px_rgba(23,63,44,.18)] sm:p-6 md:rounded-[2rem] md:p-9">
       <div className="absolute -right-16 -top-20 size-56 rounded-full bg-[#c8ff65]/10 blur-2xl" />
       <div className="relative">
         <div className="mb-5 flex items-center justify-between gap-3">
@@ -219,7 +262,7 @@ export function RoadmapPrompt() {
         </div>
         <div className="mt-4 flex max-w-full flex-wrap items-center gap-2 text-xs text-white/45"><span className="mr-1 font-semibold text-white/55">Try:</span>{suggestions.map((suggestion) => <button key={suggestion} type="button" onClick={() => selectSuggestion(suggestion)} aria-label={`Use prompt: ${suggestion}`} className="max-w-full break-words rounded-full border border-white/15 px-3 py-2 text-left leading-4 text-white/65 transition hover:-translate-y-0.5 hover:border-[#c8ff65]/50 hover:bg-[#c8ff65]/10 hover:text-[#c8ff65] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#c8ff65]">{suggestion}</button>)}</div>
       </div>
-    </form><Dialog open={limitOpen} onOpenChange={setLimitOpen}><DialogContent className="max-w-md border-white/10 bg-[#fffefa] dark:bg-[#111512] dark:text-white"><DialogHeader><div className="mb-3 grid size-14 place-items-center rounded-2xl bg-[#c8ff65] text-2xl shadow-[0_0_35px_rgba(200,255,101,.25)]">🚀</div><DialogTitle>Daily Limit Reached</DialogTitle><DialogDescription className="dark:text-white/55">You have reached your daily generation limit to ensure fair usage. Please come back tomorrow (resets at midnight) to generate more roadmaps!</DialogDescription></DialogHeader><button type="button" onClick={() => setLimitOpen(false)} className="mt-5 min-h-11 w-full rounded-xl bg-[#173f2c] px-5 font-black text-white transition hover:bg-[#21573d] dark:bg-[#c8ff65] dark:text-[#17211b]">Got it</button></DialogContent></Dialog></>
+    </form><Dialog open={limitOpen} onOpenChange={setLimitOpen}><DialogContent className="max-w-md border-white/10 bg-[#fffefa] dark:bg-[#111512] dark:text-white"><DialogHeader><div className="mb-3 grid size-14 place-items-center rounded-2xl bg-[#c8ff65] text-2xl shadow-[0_0_35px_rgba(200,255,101,.25)]">🚀</div><DialogTitle>Daily Limit Reached</DialogTitle><DialogDescription className="dark:text-white/55">{DAILY_LIMIT_MESSAGE} Your allowance resets at midnight.</DialogDescription></DialogHeader><button type="button" onClick={() => setLimitOpen(false)} className="mt-5 min-h-11 w-full rounded-xl bg-[#173f2c] px-5 font-black text-white transition hover:bg-[#21573d] dark:bg-[#c8ff65] dark:text-[#17211b]">Got it</button></DialogContent></Dialog><LoginRequiredDialog open={loginOpen} onOpenChange={setLoginOpen} /></>
   );
 }
 
