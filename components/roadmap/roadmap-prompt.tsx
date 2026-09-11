@@ -156,14 +156,14 @@ export function RoadmapPrompt() {
     <><form action={action} noValidate className="relative overflow-hidden rounded-3xl bg-[#173f2c] p-4 text-white shadow-[0_24px_80px_rgba(23,63,44,.18)] sm:p-6 md:rounded-[2rem] md:p-9">
       <div className="absolute -right-16 -top-20 size-56 rounded-full bg-[#c8ff65]/10 blur-2xl" />
       <div className="relative">
-        <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-center gap-2 text-xs font-black uppercase tracking-[.2em] text-[#c8ff65]"><Sparkles size={16} /> AI path builder</div>
-          <div className="flex items-center gap-2">
+        <div className="mb-5 flex items-center justify-between gap-3">
+          <div className="flex shrink-0 items-center gap-2 text-xs font-black uppercase tracking-[.2em] text-[#c8ff65]"><Sparkles size={16} /> <span className="hidden min-[390px]:inline">AI path builder</span><span className="min-[390px]:hidden">AI builder</span></div>
+          <div className="flex min-w-0 items-center gap-2">
             <Bot className="size-4 shrink-0 text-[#c8ff65]" aria-hidden="true" />
             <Select value={selectedModel} onValueChange={setSelectedModel}>
               <SelectTrigger
                 aria-label="Choose AI model"
-                className="w-full min-w-0 sm:w-[13.5rem]"
+                className="w-[min(13.5rem,58vw)] min-w-0"
               >
                 <SelectValue placeholder="Select AI model" />
               </SelectTrigger>
