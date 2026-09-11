@@ -411,7 +411,6 @@ You must respond with one valid JSON object and nothing else. Never wrap the JSO
         }
 
         rawContent = choice.message.content ?? "";
-        if (!rawContent) throw new Error("Groq returned an empty roadmap response.");
       } catch (requestError) {
         const rejectedGeneration = getRejectedGeneration(requestError);
         if (!rejectedGeneration) throw requestError;
