@@ -19,3 +19,5 @@ export const AUTH_REQUIRED_MESSAGE = "Please log in to generate your custom road
 
 export const DAILY_LIMIT_MESSAGE =
   `You've reached your daily limit of ${DAILY_GENERATION_LIMIT} roadmaps! Come back tomorrow.`;
+
+export const SIGN_IN_REQUIRED_MESSAGE = "Please log in to use this feature.";
