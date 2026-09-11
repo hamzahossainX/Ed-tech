@@ -374,7 +374,33 @@ You must respond with one valid JSON object and nothing else. Never wrap the JSO
       let rawContent: string;
 
       try {
-        const completion = await requestRoadmap(client);
+        const completion = await client.chat.completions.create({
+          model: process.env.GROQ_MODEL ?? DEFAULT_GROQ_MODEL,
+          temperature: 0.4,
+          max_completion_tokens: MAX_COMPLETION_TOKENS,
+          reasoning_effort: "low",
+          reasoning_format: "hidden",
+          messages: [
+            {
+              role: "system",
+              content: systemPrompt,
+            },
+            { role: "user", content: prompt },
+          ],
+          response_format: isAdvanced
+            ? { type: "json_object" }
+            : {
+                type: "json_schema",
+                json_schema: {
+                  name: "learning_roadmap",
+                  strict: true,
+                  schema: createRoadmapJsonSchema(false),
+                },
+              },
+        }, {
+          signal: AbortSignal.timeout(GROQ_ATTEMPT_TIMEOUT_MS),
+          maxRetries: 0,
+        });
         const choice = completion.choices[0];
 
         if (!choice) throw new Error("Groq returned no completion choice.");
