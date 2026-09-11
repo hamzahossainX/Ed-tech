@@ -5,11 +5,13 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { db } from "@/db";
+import { requireSignedInEmail } from "@/lib/require-session";
 
 const roadmapIdSchema = z.string().uuid();
 const userNameSchema = z.string().trim().min(2, "Enter your full name.").max(100, "Name must be 100 characters or fewer.");
 
 export async function claimCertificate(roadmapId: string, userName: string) {
+  await requireSignedInEmail();
   const id = roadmapIdSchema.parse(roadmapId);
   const name = userNameSchema.parse(userName);
 
