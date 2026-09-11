@@ -5,7 +5,6 @@ import Groq from "groq-sdk";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
-import { auth } from "@/auth";
 import { db } from "@/db";
 import { users } from "@/db/schema";
 import {
@@ -25,6 +24,7 @@ import {
   DAILY_GENERATION_LIMIT,
   LIMIT_REACHED_ERROR,
 } from "@/lib/roadmap-access";
+import { getSignedInEmail } from "@/lib/require-session";
 import { ROADMAP_PROMPT_ERROR, roadmapPromptSchema } from "@/lib/roadmap-validation";
 
 const milestoneSchema = z.object({
@@ -239,8 +239,8 @@ export async function generateRoadmap(
   // visitor must never learn whether their prompt would have been accepted,
   // and must never reach a provider call. The hero form blocks these submits
   // client-side; this branch is the gate that actually enforces it.
-  const session = await auth();
-  if (!session?.user?.email) {
+  const signedInEmail = await getSignedInEmail();
+  if (!signedInEmail) {
     return { success: false, error: AUTH_REQUIRED_ERROR, authRequiredAt: Date.now() };
   }
 
@@ -253,10 +253,10 @@ export async function generateRoadmap(
   const isSecurityFocused = formData.get("securityFocus") === "true";
 
   const signedInUser = await db.query.users.findFirst({
-    where: eq(users.email, session.user.email),
+    where: eq(users.email, signedInEmail),
     columns: { id: true, role: true },
   });
-  const isAdmin = signedInUser?.role === "admin" || isAdminEmail(session.user.email);
+  const isAdmin = signedInUser?.role === "admin" || isAdminEmail(signedInEmail);
 
   // A live session whose account row is gone cannot be metered, so it is
   // treated as signed out rather than handed an unmetered generation.
