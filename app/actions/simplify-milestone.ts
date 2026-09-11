@@ -6,6 +6,8 @@ import { z } from "zod";
 import { db } from "@/db";
 import { roadmapMilestones } from "@/db/schema";
 import { getGroq } from "@/lib/groq";
+import { SIGN_IN_REQUIRED_MESSAGE } from "@/lib/roadmap-access";
+import { getSignedInEmail } from "@/lib/require-session";
 
 const milestoneIdSchema = z.string().uuid();
 
@@ -25,6 +27,12 @@ const GENERIC_ELI5_ERROR =
 export async function simplifyMilestone(
   milestoneId: string,
 ): Promise<SimplifyMilestoneResult> {
+  // This action calls a paid provider, so it is gated like generation is.
+  // Without the check anyone holding a milestone id could spend the quota.
+  if (!await getSignedInEmail()) {
+    return { success: false, error: SIGN_IN_REQUIRED_MESSAGE };
+  }
+
   const parsedId = milestoneIdSchema.safeParse(milestoneId);
   if (!parsedId.success) {
     return { success: false, error: GENERIC_ELI5_ERROR };
