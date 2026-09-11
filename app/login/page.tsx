@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { auth } from "@/auth";
+import { auth, isGithubAuthEnabled } from "@/auth";
 import { AuthCard } from "@/components/auth/auth-card";
 
 type Props = {
@@ -16,5 +16,5 @@ export default async function LoginPage({ searchParams }: Props) {
     ? "Your account was created. Sign in to continue."
     : undefined;
 
-  return <AuthCard mode="login" initialError={initialError} initialNotice={initialNotice} />;
+  return <AuthCard mode="login" initialError={initialError} initialNotice={initialNotice} isGithubEnabled={isGithubAuthEnabled} />;
 }
