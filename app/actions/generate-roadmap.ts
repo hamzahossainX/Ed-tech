@@ -240,6 +240,7 @@ export async function generateRoadmap(
   }
   const prompt = parsedPrompt.data;
   const isAdvanced = formData.get("isAdvanced") === "true";
+  const isSecurityFocused = formData.get("securityFocus") === "true";
 
   const session = await auth();
   const signedInUser = session?.user?.email
