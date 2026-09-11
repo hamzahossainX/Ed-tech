@@ -19,7 +19,6 @@ import {
   createCareerInsightsQuery,
   type CareerInsights,
 } from "@/lib/career-insights";
-import { getGroq } from "@/lib/groq";
 import { getOrCreateGuestId } from "@/lib/guest";
 import { ROADMAP_PROMPT_ERROR, roadmapPromptSchema } from "@/lib/roadmap-validation";
 
