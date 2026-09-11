@@ -93,9 +93,11 @@ const EDUCATIONAL_REFUSAL_MESSAGE =
 // Keep these limits server-only. The UI intentionally never exposes quota totals.
 const AUTHENTICATED_DAILY_GENERATION_LIMIT = 6;
 const GUEST_DAILY_GENERATION_LIMIT = 3;
-// Both primary and backup clients call the same request function, so this
-// output budget is applied consistently to either provider attempt.
 const MAX_COMPLETION_TOKENS = 8000;
+const GROQ_ATTEMPT_TIMEOUT_MS = 11_000;
+const GEMINI_ATTEMPT_TIMEOUT_MS = 22_000;
+const DEFAULT_GROQ_MODEL = "openai/gpt-oss-20b";
+const DEFAULT_GEMINI_MODEL = "gemini-3.8-flash";
 
 class IncompleteRoadmapGenerationError extends Error {
   constructor(message: string, options?: ErrorOptions) {
