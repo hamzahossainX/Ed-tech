@@ -121,7 +121,7 @@ Return exactly 4 or 5 short, friendly lines. Use familiar analogies such as toys
     } catch (primaryError) {
       console.warn("Primary ELI5 API failed, switching to backup...", primaryError);
 
-      const backupApiKey = process.env.GROQ_BACKUP_API_KEY;
+      const backupApiKey = process.env.GROQ_API_KEY_2;
       if (!backupApiKey) throw primaryError;
 
       response = await requestSimplification(
