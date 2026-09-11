@@ -419,13 +419,56 @@ You must respond with one valid JSON object and nothing else. Never wrap the JSO
         rawContent = rejectedGeneration;
       }
 
-      let parsedContent: unknown;
-      try {
-        parsedContent = JSON.parse(rawContent);
-      } catch (parseError) {
-        throw new IncompleteRoadmapGenerationError("Groq returned malformed or truncated JSON.", {
-          cause: parseError,
-        });
+      return parseAndValidateRoadmap(rawContent, provider);
+    }
+
+    async function requestGeminiRoadmap(apiKey: string) {
+      const model = process.env.GEMINI_MODEL ?? DEFAULT_GEMINI_MODEL;
+      const response = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "x-goog-api-key": apiKey,
+          },
+          body: JSON.stringify({
+            systemInstruction: {
+              parts: [{ text: systemPrompt }],
+            },
+            contents: [{
+              role: "user",
+              parts: [{ text: prompt }],
+            }],
+            generationConfig: {
+              temperature: 0.4,
+              maxOutputTokens: MAX_COMPLETION_TOKENS,
+              responseFormat: {
+                text: {
+                  mimeType: "application/json",
+                  schema: createRoadmapJsonSchema(isAdvanced),
+                },
+              },
+            },
+          }),
+          cache: "no-store",
+          signal: AbortSignal.timeout(GEMINI_ATTEMPT_TIMEOUT_MS),
+        },
+      );
+
+      if (!response.ok) {
+        const requestError = new Error(`Gemini request failed with status ${response.status}.`);
+        Object.assign(requestError, { status: response.status });
+        throw requestError;
+      }
+
+      const responseBody = await response.json() as GeminiGenerateContentResponse;
+      const candidate = responseBody.candidates?.[0];
+      if (!candidate) {
+        const blockReason = responseBody.promptFeedback?.blockReason;
+        throw new Error(blockReason
+          ? `Gemini blocked the response (${blockReason}).`
+          : "Gemini returned no completion candidate.");
       }
 
       return createAiResponseSchema(isAdvanced).parse(parsedContent);
