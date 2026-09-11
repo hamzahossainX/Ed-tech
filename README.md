@@ -110,11 +110,16 @@ Set the required variables in `.env.local`:
 
 ```dotenv
 DATABASE_URL=postgresql://user:password@host/database?sslmode=require
-GROQ_API_KEY=your_groq_api_key
+GROQ_API_KEY_1=your_primary_groq_api_key
+GROQ_API_KEY_2=your_secondary_groq_api_key
+GROQ_API_KEY_3=your_tertiary_groq_api_key
 GROQ_MODEL=openai/gpt-oss-20b
+GEMINI_API_KEY=your_gemini_api_key
+GEMINI_MODEL=gemini-3.8-flash
 GITHUB_ID=your_github_oauth_client_id
 GITHUB_SECRET=your_github_oauth_client_secret
 AUTH_SECRET=generate_with_npx_auth_secret
+ADMIN_EMAILS=["admin@example.com"]
 ```
 
 Create the secret with `npx auth secret`. In your GitHub OAuth App, set the
@@ -146,11 +151,16 @@ Open [http://localhost:3000](http://localhost:3000).
 | Variable | Required | Used for |
 | --- | --- | --- |
 | `DATABASE_URL` | Yes | Neon database connection and Drizzle migrations |
-| `GROQ_API_KEY` | Yes | Roadmap generation |
+| `GROQ_API_KEY_1` | Yes | Primary Groq roadmap provider |
+| `GROQ_API_KEY_2` | Recommended | First Groq fallback provider |
+| `GROQ_API_KEY_3` | Recommended | Second Groq fallback provider |
 | `GROQ_MODEL` | No | Groq model override; defaults to `openai/gpt-oss-20b` |
+| `GEMINI_API_KEY` | Recommended | Final roadmap provider fallback |
+| `GEMINI_MODEL` | No | Gemini model override; defaults to `gemini-3.8-flash` |
 | `GITHUB_ID` | Yes for sign-in | GitHub OAuth App client ID |
 | `GITHUB_SECRET` | Yes for sign-in | GitHub OAuth App client secret |
 | `AUTH_SECRET` | Yes | Encrypts and signs Auth.js cookies and tokens |
+| `ADMIN_EMAILS` | No | Server-only JSON array or comma-separated emails that bypass generation and share limits |
 | `CLOUDINARY_CLOUD_NAME` | For uploads | Cloudinary account identifier |
 | `CLOUDINARY_API_KEY` | For uploads | Signed upload generation |
 | `CLOUDINARY_API_SECRET` | For uploads | Server-side upload signing |
@@ -172,7 +182,7 @@ Never expose database, Groq, or Cloudinary secrets through variables prefixed wi
 ## Deploy to Vercel
 
 1. Import the GitHub repository into Vercel.
-2. Add `DATABASE_URL`, `GROQ_API_KEY`, and `GROQ_MODEL` under Project Settings, then Environment Variables.
+2. Add `DATABASE_URL`, `GROQ_API_KEY_1`, `GROQ_API_KEY_2`, `GROQ_API_KEY_3`, `GROQ_MODEL`, `GEMINI_API_KEY`, and `GEMINI_MODEL` under Project Settings, then Environment Variables.
 3. Add the Cloudinary variables only if uploads are part of the deployment.
 4. Deploy the project.
 
