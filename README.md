@@ -1,6 +1,9 @@
 # LearnX
 
-LearnX creates a personal learning roadmap from a short goal such as "Learn Python in three months." Groq returns a structured plan, the application stores it in Neon Postgres, and the learner tracks each milestone from a shareable roadmap page.
+## About
+
+LearnX is an AI-powered EdTech platform that converts natural-language goals into structured, week-by-week learning roadmaps. It features real-time milestone tracking, AI mentorship, interactive ELI5 breakdowns, and downloadable completion certificates.
+
 
 The current version does not require an account. This keeps the demo flow short, but it also means that anyone with a roadmap URL can view and update that roadmap. See [Security model](#security-model) before using the project with private data.
 
