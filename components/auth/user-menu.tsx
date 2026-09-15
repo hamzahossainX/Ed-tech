@@ -1,7 +1,8 @@
 "use client";
 
 import * as Avatar from "@radix-ui/react-avatar";
-import { LogOut } from "lucide-react";
+import { Crown, LogOut } from "lucide-react";
+import Link from "next/link";
 import { signOut } from "next-auth/react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 
@@ -49,6 +50,13 @@ export function UserMenu({ user }: UserMenuProps) {
             </span>
           )}
         </DropdownMenuLabel>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem asChild>
+          <Link href="/pricing">
+            <Crown size={16} className="text-amber-500" />
+            Pricing & Plans
+          </Link>
+        </DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem
           onSelect={() => signOut({ redirectTo: "/" })}
