@@ -189,3 +189,7 @@ export const modulesRelations = relations(modules, ({ one, many }) => ({
   course: one(courses, { fields: [modules.courseId], references: [courses.id] }),
   completions: many(completedModules),
 }));
+
+export const paymentTransactionsRelations = relations(paymentTransactions, ({ one }) => ({
+  user: one(users, { fields: [paymentTransactions.userId], references: [users.id] }),
+}));
