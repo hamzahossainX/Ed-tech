@@ -16,6 +16,7 @@ import {
 
 export const userRole = pgEnum("user_role", ["student", "instructor", "admin"]);
 export const courseStatus = pgEnum("course_status", ["draft", "published", "archived"]);
+export const paymentStatus = pgEnum("payment_status", ["PENDING", "VERIFIED", "REJECTED"]);
 
 export type ResumeSkill = {
   name: string;
