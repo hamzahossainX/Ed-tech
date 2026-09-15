@@ -144,6 +144,17 @@ export const roadmapMilestones = pgTable("roadmap_milestones", {
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 }, (table) => [uniqueIndex("roadmap_milestone_position_idx").on(table.roadmapId, table.position)]);
 
+export const paymentTransactions = pgTable("payment_transactions", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  packageType: packageType("package_type").notNull(),
+  senderNumber: text("sender_number").notNull(),
+  transactionId: text("transaction_id").notNull(),
+  status: paymentStatus("status").notNull().default("PENDING"),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+});
+
 export const usersRelations = relations(users, ({ many, one }) => ({
   accounts: many(accounts),
   sessions: many(sessions),
