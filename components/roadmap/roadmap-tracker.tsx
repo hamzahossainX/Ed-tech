@@ -9,6 +9,7 @@ import { toast } from "sonner";
 import { simplifyMilestone } from "@/app/actions/simplify-milestone";
 import { toggleMilestone } from "@/app/actions/toggle-milestone";
 import { ClaimCertificateDialog } from "@/components/certificate/claim-certificate-dialog";
+import { MentorChat } from "@/components/roadmap/mentor-chat";
 import { CareerInsightsWidget } from "@/components/roadmap/career-insights-widget";
 import { RoadmapExportMenu } from "@/components/roadmap/roadmap-export-menu";
 import { RoadmapShareButton } from "@/components/roadmap/roadmap-share-button";
@@ -301,6 +302,7 @@ export function RoadmapTracker({ roadmap, isSharedSnapshot = false }: Props) {
           )}
         </DialogContent>
       </Dialog>
+      {!isSharedSnapshot && <MentorChat roadmap={currentRoadmap} />}
     </section>
   );
 }
