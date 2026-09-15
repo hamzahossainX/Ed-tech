@@ -85,6 +85,13 @@
       "when": 1787984763876,
       "tag": "0011_daily_katie_power",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1789466731432,
+      "tag": "0012_talented_thaddeus_ross",
+      "breakpoints": true
     }
   ]
 }
