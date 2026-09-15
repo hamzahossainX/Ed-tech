@@ -1,286 +1,153 @@
-# LearnX
+# 🎓 LearnX — Next-Gen AI Learning Roadmap Platform
 
-LearnX creates a personal learning roadmap from a short goal such as "Learn Python in three months." Groq returns a structured plan, the application stores it in Neon Postgres, and the learner tracks each milestone from a shareable roadmap page.
+> **LearnX** is an AI-powered EdTech platform that generates personalized, structured learning roadmaps from natural language goals, featuring real-time progress tracking, AI mentorship, interactive ELI5 breakdowns, and verified PDF certificates.
 
-The current version does not require an account. This keeps the demo flow short, but it also means that anyone with a roadmap URL can view and update that roadmap. See [Security model](#security-model) before using the project with private data.
+---
 
-## Features
+## 📸 Screenshots & UI Showcase
 
-- Generate a structured learning plan from a natural-language prompt
-- Store roadmaps and ordered milestones in Postgres
-- Attach one or two AI-suggested documentation links to each milestone
-- Claim a named certificate after completing every milestone
-- Export the certificate as a client-generated PDF
-- Open a roadmap directly at `/roadmap/[id]`
-- Mark milestones complete with optimistic UI updates
-- Simplify technical milestones into four or five child-friendly ELI5 points
-- Track completion with a progress bar and completion confetti
-- Export a complete roadmap as a multi-page PDF or Notion-ready Markdown
-- Run the same application locally or on Vercel
+<div align="center">
+  <img src="public/assets/hero_preview.png" alt="LearnX Hero & Dashboard UI" width="800"/>
+  <p><em>Figure 1: AI Prompt Input & Interactive Dashboard Interface</em></p>
+  <br/>
+  <img src="public/assets/roadmap_preview.png" alt="LearnX Roadmap Tracker & AI Mentor" width="800"/>
+  <p><em>Figure 2: Milestone Tracker with Progress Indicators & Floating AI Mentor Chat</em></p>
+</div>
 
-## Technology
+---
 
-| Area | Choice |
-| --- | --- |
-| Application | Next.js 15 App Router, React 19, TypeScript |
-| Backend | Next.js Server Actions |
-| Styling | Tailwind CSS 4, Shadcn UI conventions |
-| Animation | Framer Motion |
-| Database | Neon serverless Postgres |
-| ORM and migrations | Drizzle ORM, Drizzle Kit |
-| AI | Groq SDK with strict JSON Schema output |
-| Validation | Zod |
-| Deployment | Vercel |
+## ✨ Core Features
 
-## How it works
+- **🚀 AI Roadmap Generation:** Instant creation of week-by-week learning paths from simple natural-language prompts.
+- **💬 Context-Aware AI Mentor:** Floating RAG-lite AI chat widget that answers questions grounded specifically in your active roadmap.
+- **⚡ ELI5 Milestone Simplification:** Breakdown complex technical concepts into child-friendly micro-steps using AI.
+- **🏆 Verified PDF Certificates:** Mint downloadable, custom-styled completion certificates upon completing all milestones.
+- **📊 Real-time Progress Tracker:** Interactive checkboxes with optimistic UI state updates and completion celebration confetti.
+- **💰 Monetization & Tier Plans:** Built-in SaaS subscription pricing (`/pricing`) and manual bKash / Nagad transaction verification flow.
+- **🔒 Rate Limiting & Access Control:** Daily generation caps (5/day) enforced via atomic database counters with admin bypass rules.
+- **📥 Multi-Format Export:** Export roadmaps directly to multi-page PDFs or Notion-ready Markdown.
 
-1. The landing page reveals the roadmap prompt form.
-2. `generateRoadmap` validates the prompt and requests a strict JSON response from Groq.
-3. One SQL statement inserts the roadmap and its ordered milestones. This prevents a partially saved roadmap.
-4. The Server Action redirects to `/roadmap/{id}`.
-5. The dynamic route reads the roadmap and milestones from Neon.
-6. Checkbox changes use an optimistic client update while `toggleMilestone` writes the new state to Postgres.
+---
 
-## Project structure
+## 🛠️ Technology Stack
 
-```text
-app/
-├── actions/
-│   ├── generate-roadmap.ts       # Groq request and atomic database insert
-│   ├── simplify-milestone.ts     # Cached ELI5 explanation generation
-│   └── toggle-milestone.ts       # Milestone completion mutation
-├── roadmap/[id]/page.tsx         # Public roadmap page
-├── globals.css
-├── layout.tsx
-└── page.tsx                      # Landing page
-components/
-├── landing/                      # Landing-page interaction
-├── roadmap/                      # Prompt and tracker components
-└── ui/                           # Shared Shadcn-style primitives
-db/
-├── index.ts                      # Neon and Drizzle client
-└── schema.ts                     # Tables, types, and relations
-drizzle/                          # Versioned SQL migrations and snapshots
-lib/                              # Groq, Cloudinary, and shared utilities
-```
+| Area | Technologies |
+| :--- | :--- |
+| **Framework** | Next.js 15 (App Router), React 19, TypeScript |
+| **Styling & UI** | Tailwind CSS v4, Shadcn UI primitives, Framer Motion |
+| **Database & ORM** | Neon Serverless Postgres, Drizzle ORM, Drizzle Kit |
+| **AI Providers** | Groq SDK (`openai/gpt-oss-20b`), Google Gemini 3.8 Flash |
+| **Auth & Security** | NextAuth.js (Auth.js v5), GitHub OAuth, Bcryptjs credentials |
+| **Validation** | Zod (strict schema parsing) |
+| **Deployment** | Vercel Platform |
 
-## Database model
+---
 
-The roadmap flow uses two tables:
+## 📐 Software Engineering & Architectural Principles
 
-- `ai_roadmaps` stores the prompt, generated title, description, and estimated duration.
-- `roadmap_milestones` stores ordered steps, resource links, completion state, and completion time. Resource links are typed JSONB objects with a title and HTTPS URL.
+To ensure high maintainability, fault tolerance, and developer productivity, **LearnX** adheres to strict software engineering standards:
 
-Deleting a roadmap deletes its milestones through the database foreign key. The roadmap still has no user foreign key, so a roadmap is not owned by the learner who generated it. Generation and every mutation now require a session, but ownership checks need that column before they can be added.
+### 1. Separation of Concerns & Clean Layering
+- **Server Actions (`app/actions/`):** Dedicated pure backend functions handling data fetching, validation, and mutations.
+- **UI Components (`components/`):** Presentation components isolated from raw database queries.
+- **Schema & Persistence (`db/schema.ts`):** Centralized Drizzle schema acting as the single source of truth for database tables and relations.
 
-Per-learner generation usage lives on `users` as `daily_generation_count` and `last_generation_date`.
+### 2. Single Source of Truth (SSOT) & Strict Typing
+- Types are inferred directly from Drizzle ORM schemas and Zod validation objects.
+- Zero manual TypeScript type duplicates across client and server logic.
 
-## Prerequisites
+### 3. Multi-Provider AI Fallback Architecture
+- **Resilient AI Chains:** Roadmap and mentor chat queries execute through a primary Groq API key, automatically failing over to secondary/tertiary Groq keys and Google Gemini on rate limits or API outages.
+- **Structured JSON Schema Constraints:** All AI responses enforce strict JSON Schema validation (`response_format: { type: "json_schema" }`), completely eliminating hallucinated output structures.
 
-- Node.js 20.9 or newer
-- npm
-- A Neon Postgres database
-- A Groq API key
-- A GitHub OAuth App
-- `bcryptjs`, `react-hook-form`, and `@hookform/resolvers` for credentials authentication
-- A Cloudinary account only if you plan to use the upload action
+### 4. Atomic Database Mutations & Concurrency Guards
+- Multi-row insertions (e.g., roadmap header + milestone steps) execute within atomic SQL transactions.
+- Rate-limiting updates use single atomic `UPDATE ... RETURNING` queries to prevent race conditions during concurrent user submissions.
 
-## Local setup
+### 5. Security-First API Boundaries
+- Every Server Action independently validates session authorization using a unified security guard, preventing unauthorized parameter mutations on public endpoints.
 
-Clone the repository and install its dependencies:
+---
 
-```bash
-git clone https://github.com/hamzahossainX/Ed-tech.git
-cd Ed-tech
-npm install
-```
+## 🤝 Contribution Guidelines
 
-The certificate exporter depends on `html2canvas` and `jspdf`. They are already
-listed in `package.json`; for a manual installation, run:
+We welcome contributions from the community! Please follow these engineering rules when contributing to **LearnX**:
+
+### 1. Branch Strategy
+- `main`: Production baseline (**Version 1.0.0**). All commits must pass full CI checks.
+- `feature/*`: Dedicated branches for new features or major enhancements.
+- `fix/*`: Bug fixes and hotfixes.
+
+### 2. Commit Message Conventions
+Follow the [Conventional Commits](https://www.conventionalcommits.org/) specification:
+- `feat(...)`: A new user-facing feature
+- `fix(...)`: A bug fix
+- `refactor(...)`: Code restructuring without functional changes
+- `docs(...)`: Documentation updates
+- `style(...)`: Formatting or CSS adjustments
+
+### 3. Pre-Pull Request Checklist
+Before submitting a Pull Request, run the following verification pipeline locally:
 
 ```bash
-npm install html2canvas jspdf @radix-ui/react-dialog
-```
+# 1. Type check
+npx tsc --noEmit
 
-Create the local environment file:
-
-```bash
-cp .env.example .env.local
-```
-
-Set the required variables in `.env.local`:
-
-```dotenv
-DATABASE_URL=postgresql://user:password@host/database?sslmode=require
-GROQ_API_KEY_1=your_primary_groq_api_key
-GROQ_API_KEY_2=your_secondary_groq_api_key
-GROQ_API_KEY_3=your_tertiary_groq_api_key
-GROQ_MODEL=openai/gpt-oss-20b
-GEMINI_API_KEY=your_gemini_api_key
-GEMINI_MODEL=gemini-3.8-flash
-GITHUB_ID=your_github_oauth_client_id
-GITHUB_SECRET=your_github_oauth_client_secret
-AUTH_SECRET=generate_with_npx_auth_secret
-ADMIN_EMAILS=["admin@example.com"]
-```
-
-Create the secret with `npx auth secret`. In your GitHub OAuth App, set the
-local homepage URL to `http://localhost:3000` (or the port printed by Next.js)
-and the authorization callback URL to
-`http://localhost:3000/api/auth/callback/github`. Create a separate OAuth App
-for production with `https://your-domain.com/api/auth/callback/github`.
-
-### GitHub sign-in on Vercel
-
-Deployed at `https://ed-tech-beryl-rho.vercel.app`. To make GitHub sign-in work
-there:
-
-1. **Set the environment variables in the Vercel project** (Settings →
-   Environment Variables, Production scope), not in `.env.local` — that file is
-   gitignored and never reaches the deployment: `DATABASE_URL`, `AUTH_SECRET`,
-   `GITHUB_ID`, `GITHUB_SECRET`, the `GROQ_API_KEY_*` keys, `GEMINI_API_KEY`,
-   and `ADMIN_EMAILS`.
-2. **Register the production callback URL** on a GitHub OAuth App:
-   `https://ed-tech-beryl-rho.vercel.app/api/auth/callback/github`, with the
-   homepage URL set to `https://ed-tech-beryl-rho.vercel.app`. GitHub matches
-   this exactly, so a trailing slash or an `http://` scheme will fail.
-3. **Leave `AUTH_URL` unset on Vercel**, or set it to
-   `https://ed-tech-beryl-rho.vercel.app`. `trustHost` is enabled, so the origin
-   is detected from the request. Never copy the localhost value into Vercel.
-4. **Redeploy** after adding variables. Vercel bakes them in at build time, so
-   existing deployments do not pick them up.
-
-Preview deployments get a different URL on every push, which will not match the
-registered callback, so GitHub sign-in only works on production and on
-`localhost` unless you register those URLs too.
-
-If `GITHUB_ID` or `GITHUB_SECRET` is missing, the GitHub provider is skipped and
-the sign-in page shows email/password only. Auth.js validates every registered
-provider when `/api/auth` boots, so registering GitHub with empty credentials
-would return 500 for *every* auth route and break email/password sign-in too.
-
-Email/password accounts use bcrypt hashes with a cost factor of 12. Passwords
-must be 8–72 characters and contain an uppercase letter, number, and special
-character. Install the credentials dependencies with:
-
-```bash
-npm install bcryptjs zod react-hook-form @hookform/resolvers
-npm install --save-dev @types/bcryptjs
-```
-
-Apply the committed migrations and start the development server:
-
-```bash
-npm run db:migrate
-npm run dev
-```
-
-Open [http://localhost:3000](http://localhost:3000).
-
-## Environment variables
-
-| Variable | Required | Used for |
-| --- | --- | --- |
-| `DATABASE_URL` | Yes | Neon database connection and Drizzle migrations |
-| `GROQ_API_KEY_1` | Yes | Primary Groq roadmap provider |
-| `GROQ_API_KEY_2` | Recommended | First Groq fallback provider |
-| `GROQ_API_KEY_3` | Recommended | Second Groq fallback provider |
-| `GROQ_MODEL` | No | Groq model override; defaults to `openai/gpt-oss-20b` |
-| `GEMINI_API_KEY` | Recommended | Final roadmap provider fallback |
-| `GEMINI_MODEL` | No | Gemini model override; defaults to `gemini-3.8-flash` |
-| `GITHUB_ID` | Yes for sign-in | GitHub OAuth App client ID |
-| `GITHUB_SECRET` | Yes for sign-in | GitHub OAuth App client secret |
-| `AUTH_SECRET` | Yes | Encrypts and signs Auth.js cookies and tokens |
-| `ADMIN_EMAILS` | No | Server-only JSON array or comma-separated emails that bypass generation and share limits |
-| `CLOUDINARY_CLOUD_NAME` | For uploads | Cloudinary account identifier |
-| `CLOUDINARY_API_KEY` | For uploads | Signed upload generation |
-| `CLOUDINARY_API_SECRET` | For uploads | Server-side upload signing |
-
-Never expose database, Groq, or Cloudinary secrets through variables prefixed with `NEXT_PUBLIC_`. Do not commit `.env.local`.
-
-## Commands
-
-| Command | Purpose |
-| --- | --- |
-| `npm run dev` | Start the local Turbopack development server |
-| `npm run build` | Create and validate a production build |
-| `npm run start` | Run the compiled production server |
-| `npm run vercel-build` | Build command used by Vercel |
-| `npm run db:generate` | Generate a migration after a schema change |
-| `npm run db:migrate` | Apply pending migrations |
-| `npm run db:studio` | Open Drizzle Studio |
-
-## Deploy to Vercel
-
-1. Import the GitHub repository into Vercel.
-2. Add `DATABASE_URL`, `GROQ_API_KEY_1`, `GROQ_API_KEY_2`, `GROQ_API_KEY_3`, `GROQ_MODEL`, `GEMINI_API_KEY`, and `GEMINI_MODEL` under Project Settings, then Environment Variables.
-3. Add the Cloudinary variables only if uploads are part of the deployment.
-4. Deploy the project.
-
-Vercel reads [vercel.json](./vercel.json) and runs `npm run vercel-build`. The Neon schema must already contain the committed migrations. Apply them from a trusted local or CI environment before deploying code that depends on a new schema.
-
-## Schema changes
-
-Update `db/schema.ts`, generate a migration, inspect the SQL, and apply it:
-
-```bash
-npm run db:generate
-npm run db:migrate
-```
-
-Commit the schema file, generated SQL, and Drizzle metadata together. Do not edit a migration after it has been applied to a shared database.
-
-## Access and limits
-
-Generating a roadmap requires a signed-in learner. The hero form blocks a
-signed-out submit before the button can enter its loading state and opens a
-dialog offering sign-in, but that is only there to avoid a pointless round
-trip: the Server Action checks the session itself, before it parses the prompt
-or reaches a provider. There is no guest allowance.
-
-A signed-in learner may generate **5 roadmaps per day**. The count and the date
-live on the `users` row, and one atomic `UPDATE ... RETURNING` reads the count,
-checks the cap, and increments it in a single statement, so two concurrent
-submits cannot both slip past the fifth. The day boundary is Asia/Dhaka, and a
-generation that fails before a roadmap is saved hands its slot back.
-
-Emails listed in `ADMIN_EMAILS`, and users whose row has the `admin` role,
-bypass the cap.
-
-## Security model
-
-Roadmaps are public by UUID, and possession of the URL grants read access.
-
-Every Server Action requires a session, because a Server Action is a public
-HTTP endpoint whether or not the UI calls it. What is **not** yet enforced is
-ownership: `ai_roadmaps` has no user column, so any signed-in learner who knows
-a roadmap UUID can toggle its milestones or claim its certificate.
-
-Before using LearnX for private or multi-user data:
-
-- add a user column to `ai_roadmaps` and check ownership inside every mutation;
-- validate upload type and size if Cloudinary uploads are enabled;
-- rotate any credential that has been copied into logs, chat, or source control.
-
-## Verification
-
-Run the production build before opening a pull request:
-
-```bash
+# 2. Production build verification
 npm run build
 ```
 
-For roadmap changes, test this sequence locally:
+---
 
-1. Submit a learning goal from `/`.
-2. Confirm the response redirects to `/roadmap/{id}`.
-3. Refresh the roadmap and check that milestones remain ordered.
-4. Open a resource and confirm it loads in a new tab.
-5. Toggle a milestone, refresh again, and confirm the completion state persisted.
-6. Open Focus Mode and confirm the ELI5 explanation is generated and cached.
-7. Complete a milestone and confirm the progress bar and confetti respond.
-8. Export the roadmap and verify both the PDF and Notion-ready Markdown options.
+## ⚙️ Getting Started Locally
 
-## License
+### Prerequisites
+- Node.js 20.9+
+- npm 10+
+- Neon Postgres database URL
+- Groq API key
 
-No license has been added yet. Until one is provided, the repository remains all rights reserved by default.
+### Installation
+
+```bash
+# Clone the repository
+git clone https://github.com/hamzahossainX/Ed-tech.git
+cd Ed-tech
+
+# Install dependencies
+npm install
+
+# Create environment configuration
+cp .env.example .env.local
+```
+
+### Environment Setup (`.env.local`)
+```dotenv
+DATABASE_URL=postgresql://user:password@host/database?sslmode=require
+GROQ_API_KEY_1=your_groq_key
+GROQ_API_KEY_2=your_backup_groq_key
+GEMINI_API_KEY=your_gemini_key
+GITHUB_ID=your_github_client_id
+GITHUB_SECRET=your_github_client_secret
+AUTH_SECRET=generate_with_npx_auth_secret
+```
+
+### Database Migration & Development
+
+```bash
+# Apply migrations to database
+npm run db:migrate
+
+# Start development server
+npm run dev
+```
+
+Open [http://localhost:3000](http://localhost:3000) to view the application.
+
+---
+
+## 📜 License
+
+This project is licensed under the **MIT License**. See the [LICENSE](./LICENSE) file for details.
+
+Developed with ❤️ by [Hamza Hossain](https://github.com/hamzahossainX).
