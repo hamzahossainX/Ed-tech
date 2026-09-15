@@ -161,6 +161,7 @@ export const usersRelations = relations(users, ({ many, one }) => ({
   courses: many(courses),
   completions: many(completedModules),
   resume: one(resumes),
+  payments: many(paymentTransactions),
 }));
 
 export const accountsRelations = relations(accounts, ({ one }) => ({
