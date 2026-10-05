@@ -19,12 +19,14 @@ import { RoadmapListenButton } from "@/components/roadmap/roadmap-listen-button"
 import { RoadmapMindMap } from "@/components/roadmap/roadmap-mind-map";
 import { RoadmapNotionButton } from "@/components/roadmap/roadmap-notion-button";
 import { RoadmapShareButton } from "@/components/roadmap/roadmap-share-button";
+import { StudyStreakDialog } from "@/components/roadmap/study-streak-dialog";
 import { ZenModeDialog } from "@/components/roadmap/zen-mode-dialog";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import type { CareerInsights } from "@/lib/career-insights";
 import { ACHIEVEMENTS, persistAchievements, readAchievements, type AchievementId, type UnlockedAchievement } from "@/lib/achievements";
 import { createMilestoneMindMap } from "@/lib/roadmap-mind-map";
 import { ROADMAP_VIEW_EVENT, ROADMAP_ZEN_EVENT, type RoadmapView } from "@/lib/roadmap-events";
+import { addStudyActivity, readStudyActivity, saveStudyActivity, type StudyActivityEvent } from "@/lib/study-activity";
 import {
   createRoadmapSnapshot,
   persistRoadmapSnapshot,
@@ -104,6 +106,7 @@ export function RoadmapTracker({ roadmap, isSharedSnapshot = false, isDemoMode =
   const [roadmapState, setRoadmapState] = useState(serverSnapshot);
   const [storageReady, setStorageReady] = useState(false);
   const [achievements, setAchievements] = useState<UnlockedAchievement[]>([]);
+  const [studyActivity, setStudyActivity] = useState<StudyActivityEvent[]>([]);
   const [activeView, setActiveView] = useState<"timeline" | "mind-map">("timeline");
   const [activeMilestone, setActiveMilestone] = useState<TrackerMilestone | null>(null);
   const [zenMilestone, setZenMilestone] = useState<TrackerMilestone | null>(null);
@@ -150,6 +153,12 @@ export function RoadmapTracker({ roadmap, isSharedSnapshot = false, isDemoMode =
     const definition = ACHIEVEMENTS.find((item) => item.id === achievementId);
     if (definition) toast.success(definition.celebration, { duration: 10_000 });
   }, []);
+  const recordStudyActivity = useCallback((event: StudyActivityEvent) => {
+    const current = readStudyActivity();
+    const next = addStudyActivity(current, event);
+    saveStudyActivity(next);
+    setStudyActivity(next);
+  }, []);
 
   useEffect(() => {
     const recoveredRoadmap = isSharedSnapshot && !isDemoMode
@@ -170,6 +179,7 @@ export function RoadmapTracker({ roadmap, isSharedSnapshot = false, isDemoMode =
 
   useEffect(() => {
     setAchievements(readAchievements());
+    setStudyActivity(readStudyActivity());
   }, []);
 
   useEffect(() => {
@@ -217,7 +227,14 @@ export function RoadmapTracker({ roadmap, isSharedSnapshot = false, isDemoMode =
               : milestone
           )),
         }));
-        if (next) await celebrateMilestone(completesRoadmap);
+        if (next) {
+          recordStudyActivity({
+            id: `milestone:${roadmapState.id}:${item.id}`,
+            type: "milestone",
+            occurredAt: new Date().toISOString(),
+          });
+          await celebrateMilestone(completesRoadmap);
+        }
       } catch {
         toast.error("We couldn't update this milestone. Please try again.", {
           duration: 20_000,
@@ -279,6 +296,7 @@ export function RoadmapTracker({ roadmap, isSharedSnapshot = false, isDemoMode =
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="flex flex-wrap items-center gap-2 text-[10px] font-black uppercase tracking-[.16em] text-[#3c7156] dark:text-[#a9e950] sm:text-xs sm:tracking-[.2em]"><BadgeCheck size={16} /> Your personal path {isDemoMode && <span className="rounded-full bg-[#c8ff65] px-2 py-1 text-[9px] tracking-[.12em] text-[#17211b]">Offline demo</span>}</div>
             <div className="flex flex-wrap items-center justify-end gap-2">
+              <StudyStreakDialog events={studyActivity} />
               <AchievementGallery unlocked={achievements} />
               <RoadmapShareButton disabled={isPending} roadmap={currentRoadmap} />
               <RoadmapNotionButton disabled={isPending} roadmap={currentRoadmap} />
@@ -432,7 +450,14 @@ export function RoadmapTracker({ roadmap, isSharedSnapshot = false, isDemoMode =
       />
       <ZenModeDialog
         milestone={zenMilestone}
-        onPomodoroComplete={() => unlockAchievement("deep-work")}
+        onPomodoroComplete={() => {
+          unlockAchievement("deep-work");
+          recordStudyActivity({
+            id: `pomodoro:${Date.now()}:${crypto.randomUUID?.() ?? Math.random().toString(36).slice(2)}`,
+            type: "pomodoro",
+            occurredAt: new Date().toISOString(),
+          });
+        }}
         onOpenChange={(open) => {
           if (!open) setZenMilestone(null);
         }}
