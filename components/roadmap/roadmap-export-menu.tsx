@@ -1,12 +1,14 @@
 "use client";
 
-import { useState } from "react";
-import { Check, ChevronDown, Download, FileText, LoaderCircle } from "lucide-react";
+import { useEffect, useState } from "react";
+import { CalendarPlus, Check, ChevronDown, Download, FileText, LoaderCircle } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { toast } from "sonner";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import type { ResourceLink } from "@/db/schema";
+import { downloadRoadmapCalendar } from "@/lib/roadmap-calendar";
+import { ROADMAP_CALENDAR_EVENT } from "@/lib/roadmap-events";
 
 type ExportMilestone = {
   id: string;
@@ -132,6 +134,28 @@ export function RoadmapExportMenu({ roadmap, disabled = false }: Props) {
     }
   }
 
+  function handleDownloadCalendar() {
+    try {
+      downloadRoadmapCalendar(roadmap);
+      toast.success("Calendar ready! Your study plan begins next Monday.", {
+        duration: 8_000,
+      });
+    } catch {
+      toast.error("We couldn't create the calendar. Please try again.", {
+        duration: 20_000,
+      });
+    }
+  }
+
+  useEffect(() => {
+    function handleCalendarCommand() {
+      if (!disabled) handleDownloadCalendar();
+    }
+
+    window.addEventListener(ROADMAP_CALENDAR_EVENT, handleCalendarCommand);
+    return () => window.removeEventListener(ROADMAP_CALENDAR_EVENT, handleCalendarCommand);
+  });
+
   return (
     <>
       <DropdownMenu>
@@ -154,6 +178,10 @@ export function RoadmapExportMenu({ roadmap, disabled = false }: Props) {
           <DropdownMenuItem onSelect={() => void handleDownloadPdf()}>
             <FileText className="size-4" aria-hidden="true" />
             Download as PDF
+          </DropdownMenuItem>
+          <DropdownMenuItem onSelect={handleDownloadCalendar}>
+            <CalendarPlus className="size-4" aria-hidden="true" />
+            Add to calendar (.ics)
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>

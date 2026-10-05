@@ -9,9 +9,11 @@ import { toast } from "sonner";
 import { simplifyMilestone } from "@/app/actions/simplify-milestone";
 import { toggleMilestone } from "@/app/actions/toggle-milestone";
 import { ClaimCertificateDialog } from "@/components/certificate/claim-certificate-dialog";
+import { AdaptiveRoadmapDialog } from "@/components/roadmap/adaptive-roadmap-dialog";
 import { CareerInsightsWidget } from "@/components/roadmap/career-insights-widget";
 import { MilestoneQuizDialog } from "@/components/roadmap/milestone-quiz-dialog";
 import { RoadmapExportMenu } from "@/components/roadmap/roadmap-export-menu";
+import { RoadmapCriticDialog } from "@/components/roadmap/roadmap-critic-dialog";
 import { RoadmapListenButton } from "@/components/roadmap/roadmap-listen-button";
 import { RoadmapMindMap } from "@/components/roadmap/roadmap-mind-map";
 import { RoadmapNotionButton } from "@/components/roadmap/roadmap-notion-button";
@@ -20,6 +22,7 @@ import { ZenModeDialog } from "@/components/roadmap/zen-mode-dialog";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import type { CareerInsights } from "@/lib/career-insights";
 import { createMilestoneMindMap } from "@/lib/roadmap-mind-map";
+import { ROADMAP_VIEW_EVENT, ROADMAP_ZEN_EVENT, type RoadmapView } from "@/lib/roadmap-events";
 import {
   createRoadmapSnapshot,
   persistRoadmapSnapshot,
@@ -149,6 +152,27 @@ export function RoadmapTracker({ roadmap, isSharedSnapshot = false, isDemoMode =
     if (storageReady) persistRoadmapSnapshot(roadmapForStorage);
   }, [roadmapForStorage, storageReady]);
 
+  useEffect(() => {
+    function handleViewCommand(event: Event) {
+      const requestedView = (event as CustomEvent<RoadmapView>).detail;
+      if (requestedView === "timeline" || requestedView === "mind-map") {
+        setActiveView(requestedView);
+      }
+    }
+
+    function handleZenCommand() {
+      const nextMilestone = milestones.find((item) => !item.isCompleted) ?? milestones[0];
+      if (nextMilestone) setZenMilestone(nextMilestone);
+    }
+
+    window.addEventListener(ROADMAP_VIEW_EVENT, handleViewCommand);
+    window.addEventListener(ROADMAP_ZEN_EVENT, handleZenCommand);
+    return () => {
+      window.removeEventListener(ROADMAP_VIEW_EVENT, handleViewCommand);
+      window.removeEventListener(ROADMAP_ZEN_EVENT, handleZenCommand);
+    };
+  }, [milestones]);
+
   function updateMilestoneCompletion(item: TrackerMilestone, next: boolean) {
     const completesRoadmap = next && completed + 1 === milestones.length;
     startTransition(async () => {
@@ -228,6 +252,28 @@ export function RoadmapTracker({ roadmap, isSharedSnapshot = false, isDemoMode =
             <div className="flex flex-wrap items-center justify-end gap-2">
               <RoadmapShareButton disabled={isPending} roadmap={currentRoadmap} />
               <RoadmapNotionButton disabled={isPending} roadmap={currentRoadmap} />
+              <AdaptiveRoadmapDialog
+                disabled={isPending}
+                roadmap={currentRoadmap}
+                onAdapted={(updates) => {
+                  const updatesByPosition = new Map(updates.map((item) => [item.position, item]));
+                  setRoadmapState((current) => ({
+                    ...current,
+                    updatedAt: new Date().toISOString(),
+                    milestones: current.milestones.map((milestone) => {
+                      if (milestone.isCompleted) return milestone;
+                      const update = updatesByPosition.get(milestone.position);
+                      return update ? {
+                        ...milestone,
+                        description: update.description,
+                        duration: update.duration,
+                        resourceLinks: update.resources,
+                      } : milestone;
+                    }),
+                  }));
+                }}
+              />
+              <RoadmapCriticDialog disabled={isPending} roadmap={currentRoadmap} />
               <RoadmapExportMenu disabled={isPending} roadmap={currentRoadmap} />
             </div>
           </div>
