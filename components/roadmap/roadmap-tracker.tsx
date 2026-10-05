@@ -12,6 +12,7 @@ import { ClaimCertificateDialog } from "@/components/certificate/claim-certifica
 import { CareerInsightsWidget } from "@/components/roadmap/career-insights-widget";
 import { MilestoneQuizDialog } from "@/components/roadmap/milestone-quiz-dialog";
 import { RoadmapExportMenu } from "@/components/roadmap/roadmap-export-menu";
+import { RoadmapListenButton } from "@/components/roadmap/roadmap-listen-button";
 import { RoadmapNotionButton } from "@/components/roadmap/roadmap-notion-button";
 import { RoadmapShareButton } from "@/components/roadmap/roadmap-share-button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -215,7 +216,12 @@ export function RoadmapTracker({ roadmap, isSharedSnapshot = false }: Props) {
             </div>
           </div>
           <h2 className="mt-3 break-words text-2xl font-black tracking-[-.04em] sm:text-3xl md:text-4xl">{roadmapState.title}</h2>
-          <p className="mt-3 max-w-2xl text-sm leading-6 text-black/50 dark:text-white/55 sm:text-base sm:leading-7">{roadmapState.description}</p>
+          <div className="mt-3 flex max-w-2xl flex-col items-start gap-3 sm:flex-row sm:items-center">
+            <p className="flex-1 text-sm leading-6 text-black/50 dark:text-white/55 sm:text-base sm:leading-7">{roadmapState.description}</p>
+            <RoadmapListenButton
+              text={`${roadmapState.title}. ${roadmapState.description} Estimated duration: ${roadmapState.estimatedDuration}. This learning path contains ${milestones.length} milestones.`}
+            />
+          </div>
         </div>
         <div role="progressbar" aria-label="Roadmap completion" aria-valuemin={0} aria-valuemax={100} aria-valuenow={progress} className="flex min-w-36 flex-col justify-center rounded-2xl bg-[#f0f7e7] p-5 dark:bg-white/6"><span className="text-3xl font-black">{progress}%</span><span className="mt-1 text-xs font-bold uppercase tracking-wider text-black/40 dark:text-white/45">{completed} of {milestones.length} done</span><div className="mt-3 h-2 overflow-hidden rounded-full bg-black/10 dark:bg-white/10"><motion.div animate={{ width: `${progress}%` }} transition={{ duration: 0.45, ease: "easeOut" }} className="h-full rounded-full bg-[#3c7156] dark:bg-[#a9e950]" /></div></div>
       </header>
