@@ -33,7 +33,7 @@ export default async function RoadmapPage({ params, searchParams }: Props) {
           </Link>
         </Header>
         <div className="mx-auto max-w-6xl px-3 pt-3 sm:px-6 sm:pt-8">
-          <SharedRoadmapLoader encodedRoadmap={encodedRoadmap} />
+          <SharedRoadmapLoader encodedRoadmap={encodedRoadmap} isDemo={id === "demo"} />
         </div>
       </main>
     );

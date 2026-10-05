@@ -9,9 +9,10 @@ import type { RecoverableRoadmap } from "@/lib/roadmap-storage";
 
 type Props = {
   encodedRoadmap: string;
+  isDemo?: boolean;
 };
 
-export function SharedRoadmapLoader({ encodedRoadmap }: Props) {
+export function SharedRoadmapLoader({ encodedRoadmap, isDemo = false }: Props) {
   const [roadmap, setRoadmap] = useState<RecoverableRoadmap | null>(null);
   const [isInvalid, setIsInvalid] = useState(false);
 
@@ -60,5 +61,5 @@ export function SharedRoadmapLoader({ encodedRoadmap }: Props) {
     );
   }
 
-  return <RoadmapTracker roadmap={roadmap} isSharedSnapshot />;
+  return <RoadmapTracker roadmap={roadmap} isSharedSnapshot isDemoMode={isDemo} />;
 }

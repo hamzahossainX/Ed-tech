@@ -39,6 +39,7 @@ type Props = {
     milestones: TrackerMilestone[];
   };
   isSharedSnapshot?: boolean;
+  isDemoMode?: boolean;
 };
 
 async function celebrateMilestone(isRoadmapComplete: boolean) {
@@ -88,7 +89,7 @@ async function celebrateMilestone(isRoadmapComplete: boolean) {
   }
 }
 
-export function RoadmapTracker({ roadmap, isSharedSnapshot = false }: Props) {
+export function RoadmapTracker({ roadmap, isSharedSnapshot = false, isDemoMode = false }: Props) {
   const [isPending, startTransition] = useTransition();
   const serverSnapshot = useMemo(() => createRoadmapSnapshot(roadmap), [roadmap]);
   const [roadmapState, setRoadmapState] = useState(serverSnapshot);
@@ -122,7 +123,7 @@ export function RoadmapTracker({ roadmap, isSharedSnapshot = false }: Props) {
   }), [eli5ByMilestone, milestones, roadmapForStorage]);
 
   useEffect(() => {
-    const recoveredRoadmap = isSharedSnapshot
+    const recoveredRoadmap = isSharedSnapshot && !isDemoMode
       ? serverSnapshot
       : restoreRoadmapSnapshot(serverSnapshot);
     setRoadmapState(recoveredRoadmap);
@@ -132,7 +133,7 @@ export function RoadmapTracker({ roadmap, isSharedSnapshot = false }: Props) {
         .map((item) => [item.id, item.eli5Explanation as string[]]),
     ));
     setStorageReady(true);
-  }, [isSharedSnapshot, serverSnapshot]);
+  }, [isDemoMode, isSharedSnapshot, serverSnapshot]);
 
   useEffect(() => {
     if (storageReady) persistRoadmapSnapshot(roadmapForStorage);
@@ -165,6 +166,11 @@ export function RoadmapTracker({ roadmap, isSharedSnapshot = false }: Props) {
   function handleToggle(item: TrackerMilestone) {
     if (item.isCompleted) {
       updateMilestoneCompletion(item, false);
+      return;
+    }
+
+    if (isDemoMode) {
+      updateMilestoneCompletion(item, true);
       return;
     }
 
@@ -208,7 +214,7 @@ export function RoadmapTracker({ roadmap, isSharedSnapshot = false }: Props) {
       <header className="grid gap-5 border-b border-black/8 p-4 dark:border-white/8 sm:p-6 md:grid-cols-[1fr_auto] md:gap-8 md:p-8 lg:p-10">
         <div>
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[.16em] text-[#3c7156] dark:text-[#a9e950] sm:text-xs sm:tracking-[.2em]"><BadgeCheck size={16} /> Your personal path</div>
+            <div className="flex flex-wrap items-center gap-2 text-[10px] font-black uppercase tracking-[.16em] text-[#3c7156] dark:text-[#a9e950] sm:text-xs sm:tracking-[.2em]"><BadgeCheck size={16} /> Your personal path {isDemoMode && <span className="rounded-full bg-[#c8ff65] px-2 py-1 text-[9px] tracking-[.12em] text-[#17211b]">Offline demo</span>}</div>
             <div className="flex flex-wrap items-center justify-end gap-2">
               <RoadmapShareButton disabled={isPending} roadmap={currentRoadmap} />
               <RoadmapNotionButton disabled={isPending} roadmap={currentRoadmap} />
