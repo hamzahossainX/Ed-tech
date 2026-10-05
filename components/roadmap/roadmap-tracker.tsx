@@ -20,6 +20,7 @@ import { RoadmapMindMap } from "@/components/roadmap/roadmap-mind-map";
 import { RoadmapNotionButton } from "@/components/roadmap/roadmap-notion-button";
 import { RoadmapShareButton } from "@/components/roadmap/roadmap-share-button";
 import { StudyStreakDialog } from "@/components/roadmap/study-streak-dialog";
+import { WorkloadHeatmapDialog } from "@/components/roadmap/workload-heatmap-dialog";
 import { ZenModeDialog } from "@/components/roadmap/zen-mode-dialog";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import type { CareerInsights } from "@/lib/career-insights";
@@ -297,6 +298,7 @@ export function RoadmapTracker({ roadmap, isSharedSnapshot = false, isDemoMode =
             <div className="flex flex-wrap items-center gap-2 text-[10px] font-black uppercase tracking-[.16em] text-[#3c7156] dark:text-[#a9e950] sm:text-xs sm:tracking-[.2em]"><BadgeCheck size={16} /> Your personal path {isDemoMode && <span className="rounded-full bg-[#c8ff65] px-2 py-1 text-[9px] tracking-[.12em] text-[#17211b]">Offline demo</span>}</div>
             <div className="flex flex-wrap items-center justify-end gap-2">
               <StudyStreakDialog events={studyActivity} />
+              <WorkloadHeatmapDialog roadmap={currentRoadmap} />
               <AchievementGallery unlocked={achievements} />
               <RoadmapShareButton disabled={isPending} roadmap={currentRoadmap} />
               <RoadmapNotionButton disabled={isPending} roadmap={currentRoadmap} />

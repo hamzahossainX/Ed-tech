@@ -44,7 +44,7 @@ function nextMonday(now: Date) {
   return addDays(start, daysUntilMonday);
 }
 
-function durationInDays(duration: string) {
+export function estimateDurationInDays(duration: string) {
   const normalized = duration.toLowerCase().replace(/[–—]/gu, "-");
   const range = normalized.match(/(\d+)\s*-\s*(\d+)\s*(day|week|month)s?/u)
     ?? normalized.match(/(day|week|month)s?\s*(\d+)\s*-\s*(\d+)/u);
@@ -108,7 +108,7 @@ export function createRoadmapCalendar(
   let eventStart = nextMonday(now);
 
   for (const milestone of [...roadmap.milestones].sort((a, b) => a.position - b.position)) {
-    const milestoneDays = durationInDays(milestone.duration);
+    const milestoneDays = estimateDurationInDays(milestone.duration);
     const eventEnd = addDays(eventStart, milestoneDays);
     const resources = milestone.resourceLinks
       .map((resource) => `${resource.title}: ${resource.url}`)
