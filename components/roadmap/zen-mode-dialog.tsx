@@ -17,6 +17,7 @@ type ZenModeDialogProps = {
   milestone: { title: string; description: string; isCompleted: boolean } | null;
   onOpenChange: (open: boolean) => void;
   onMarkDone: () => void;
+  onPomodoroComplete?: () => void;
 };
 
 function formatTime(totalSeconds: number) {
@@ -29,6 +30,7 @@ export function ZenModeDialog({
   milestone,
   onOpenChange,
   onMarkDone,
+  onPomodoroComplete,
 }: ZenModeDialogProps) {
   const [remainingSeconds, setRemainingSeconds] = useState(POMODORO_SECONDS);
   const [isRunning, setIsRunning] = useState(false);
@@ -57,6 +59,7 @@ export function ZenModeDialog({
         deadlineRef.current = null;
         if (!completionAnnouncedRef.current) {
           completionAnnouncedRef.current = true;
+          onPomodoroComplete?.();
           toast.success("Pomodoro complete! Take a 5-minute break.", {
             duration: 10_000,
           });
@@ -67,7 +70,7 @@ export function ZenModeDialog({
     updateTimer();
     const interval = window.setInterval(updateTimer, 250);
     return () => window.clearInterval(interval);
-  }, [isRunning]);
+  }, [isRunning, onPomodoroComplete]);
 
   function startTimer() {
     if (remainingSeconds === 0) setRemainingSeconds(POMODORO_SECONDS);

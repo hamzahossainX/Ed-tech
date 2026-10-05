@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useOptimistic, useState, useTransition } from "react";
+import { useCallback, useEffect, useMemo, useOptimistic, useState, useTransition } from "react";
 import { motion } from "framer-motion";
 import { Baby, BadgeCheck, BookOpen, Check, ChevronRight, Clock3, Circle, ExternalLink, ListTree, LoaderCircle, Sparkles, Timer, Workflow } from "lucide-react";
 import ReactMarkdown from "react-markdown";
@@ -9,6 +9,7 @@ import { toast } from "sonner";
 import { simplifyMilestone } from "@/app/actions/simplify-milestone";
 import { toggleMilestone } from "@/app/actions/toggle-milestone";
 import { ClaimCertificateDialog } from "@/components/certificate/claim-certificate-dialog";
+import { AchievementGallery } from "@/components/roadmap/achievement-gallery";
 import { AdaptiveRoadmapDialog } from "@/components/roadmap/adaptive-roadmap-dialog";
 import { CareerInsightsWidget } from "@/components/roadmap/career-insights-widget";
 import { MilestoneQuizDialog } from "@/components/roadmap/milestone-quiz-dialog";
@@ -21,6 +22,7 @@ import { RoadmapShareButton } from "@/components/roadmap/roadmap-share-button";
 import { ZenModeDialog } from "@/components/roadmap/zen-mode-dialog";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import type { CareerInsights } from "@/lib/career-insights";
+import { ACHIEVEMENTS, persistAchievements, readAchievements, type AchievementId, type UnlockedAchievement } from "@/lib/achievements";
 import { createMilestoneMindMap } from "@/lib/roadmap-mind-map";
 import { ROADMAP_VIEW_EVENT, ROADMAP_ZEN_EVENT, type RoadmapView } from "@/lib/roadmap-events";
 import {
@@ -101,6 +103,7 @@ export function RoadmapTracker({ roadmap, isSharedSnapshot = false, isDemoMode =
   const serverSnapshot = useMemo(() => createRoadmapSnapshot(roadmap), [roadmap]);
   const [roadmapState, setRoadmapState] = useState(serverSnapshot);
   const [storageReady, setStorageReady] = useState(false);
+  const [achievements, setAchievements] = useState<UnlockedAchievement[]>([]);
   const [activeView, setActiveView] = useState<"timeline" | "mind-map">("timeline");
   const [activeMilestone, setActiveMilestone] = useState<TrackerMilestone | null>(null);
   const [zenMilestone, setZenMilestone] = useState<TrackerMilestone | null>(null);
@@ -134,6 +137,19 @@ export function RoadmapTracker({ roadmap, isSharedSnapshot = false, isDemoMode =
     () => roadmapState.mermaidSyntax ?? createMilestoneMindMap(roadmapState.title, milestones),
     [milestones, roadmapState.mermaidSyntax, roadmapState.title],
   );
+  const unlockAchievement = useCallback((achievementId: AchievementId) => {
+    const current = readAchievements();
+    if (current.some((item) => item.id === achievementId)) {
+      setAchievements(current);
+      return;
+    }
+
+    const next = [...current, { id: achievementId, unlockedAt: new Date().toISOString() }];
+    persistAchievements(next);
+    setAchievements(next);
+    const definition = ACHIEVEMENTS.find((item) => item.id === achievementId);
+    if (definition) toast.success(definition.celebration, { duration: 10_000 });
+  }, []);
 
   useEffect(() => {
     const recoveredRoadmap = isSharedSnapshot && !isDemoMode
@@ -151,6 +167,19 @@ export function RoadmapTracker({ roadmap, isSharedSnapshot = false, isDemoMode =
   useEffect(() => {
     if (storageReady) persistRoadmapSnapshot(roadmapForStorage);
   }, [roadmapForStorage, storageReady]);
+
+  useEffect(() => {
+    setAchievements(readAchievements());
+  }, []);
+
+  useEffect(() => {
+    if (!storageReady) return;
+    const persistedCompleted = roadmapState.milestones.filter((item) => item.isCompleted).length;
+    if (persistedCompleted > 0) unlockAchievement("first-step");
+    if (persistedCompleted === roadmapState.milestones.length && persistedCompleted > 0) {
+      unlockAchievement("path-master");
+    }
+  }, [roadmapState.milestones, storageReady, unlockAchievement]);
 
   useEffect(() => {
     function handleViewCommand(event: Event) {
@@ -250,6 +279,7 @@ export function RoadmapTracker({ roadmap, isSharedSnapshot = false, isDemoMode =
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="flex flex-wrap items-center gap-2 text-[10px] font-black uppercase tracking-[.16em] text-[#3c7156] dark:text-[#a9e950] sm:text-xs sm:tracking-[.2em]"><BadgeCheck size={16} /> Your personal path {isDemoMode && <span className="rounded-full bg-[#c8ff65] px-2 py-1 text-[9px] tracking-[.12em] text-[#17211b]">Offline demo</span>}</div>
             <div className="flex flex-wrap items-center justify-end gap-2">
+              <AchievementGallery unlocked={achievements} />
               <RoadmapShareButton disabled={isPending} roadmap={currentRoadmap} />
               <RoadmapNotionButton disabled={isPending} roadmap={currentRoadmap} />
               <AdaptiveRoadmapDialog
@@ -402,6 +432,7 @@ export function RoadmapTracker({ roadmap, isSharedSnapshot = false, isDemoMode =
       />
       <ZenModeDialog
         milestone={zenMilestone}
+        onPomodoroComplete={() => unlockAchievement("deep-work")}
         onOpenChange={(open) => {
           if (!open) setZenMilestone(null);
         }}
