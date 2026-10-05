@@ -18,7 +18,7 @@ export function LandingExperience({ isAuthenticated }: LandingExperienceProps) {
 
   return (
     <main className="min-h-screen overflow-hidden">
-      <section className="relative mx-auto flex min-h-[72vh] max-w-7xl flex-col items-center justify-center px-4 pb-14 pt-8 text-center sm:min-h-[78vh] sm:px-6 sm:pb-20 sm:pt-12 lg:px-10">
+      <section data-tour="hero" className="relative mx-auto flex min-h-[72vh] max-w-7xl flex-col items-center justify-center px-4 pb-14 pt-8 text-center sm:min-h-[78vh] sm:px-6 sm:pb-20 sm:pt-12 lg:px-10">
         <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="mb-5 inline-flex items-center gap-2 rounded-full border border-[#173f2c]/15 bg-white/70 px-3 py-2 text-[10px] font-black uppercase tracking-[.14em] text-[#3c7156] backdrop-blur dark:border-white/10 dark:bg-white/8 dark:text-[#c8ff65] sm:mb-7 sm:px-4 sm:text-xs sm:tracking-[.2em]"><Sparkles size={15} /> One goal. Your perfect path.</motion.div>
         <motion.h1 initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: .08 }} className="max-w-5xl text-4xl font-black leading-[.95] tracking-[-.05em] sm:text-6xl md:text-7xl lg:text-[7.5rem] lg:leading-[.9] lg:tracking-[-.065em]">Turn ambition into<br /><span className="text-[#3c7156] dark:text-[#a9e950]">a clear roadmap.</span></motion.h1>
         <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: .18 }} className="mt-6 max-w-2xl text-base leading-7 text-black/50 dark:text-white/55 sm:mt-8 sm:text-lg sm:leading-8 md:text-xl">From &quot;I want to learn this&quot; to a week-by-week plan with real resources, progress tracking, and a certificate at the end.</motion.p>

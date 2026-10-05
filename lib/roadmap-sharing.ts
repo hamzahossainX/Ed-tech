@@ -79,7 +79,10 @@ function bytesToArrayBuffer(bytes: Uint8Array) {
   return copy.buffer;
 }
 
-export async function encodeRoadmapForUrl(roadmap: RecoverableRoadmap) {
+export async function encodeRoadmapForUrl(
+  roadmap: RecoverableRoadmap,
+  options: { compress?: boolean } = {},
+) {
   const envelope: SharedRoadmapEnvelope = {
     version: SHARE_FORMAT_VERSION,
     roadmap,
@@ -92,7 +95,7 @@ export async function encodeRoadmapForUrl(roadmap: RecoverableRoadmap) {
   let prefix = "plain";
   let payload = jsonBytes;
 
-  if (typeof CompressionStream !== "undefined") {
+  if (options.compress !== false && typeof CompressionStream !== "undefined") {
     prefix = "gzip";
     const compressedStream = new Blob([bytesToArrayBuffer(jsonBytes)])
       .stream()

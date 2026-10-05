@@ -5,6 +5,7 @@ import { auth } from "@/auth";
 import { UserMenu } from "@/components/auth/user-menu";
 import { CommandPalette } from "@/components/command-palette";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { GuidedTourLauncher } from "@/components/tour/guided-tour";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -33,6 +34,7 @@ export async function Header({ children, className, contentClassName }: HeaderPr
         </Link>
         <div className="flex min-w-0 items-center justify-end gap-2 sm:gap-3">
           {children}
+          <GuidedTourLauncher />
           <CommandPalette />
           {session?.user ? (
             <UserMenu user={session.user} />

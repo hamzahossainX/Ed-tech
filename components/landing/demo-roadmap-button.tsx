@@ -16,7 +16,7 @@ export function DemoRoadmapButton() {
     setIsOpening(true);
 
     try {
-      const encodedRoadmap = await encodeRoadmapForUrl(DEMO_ROADMAP);
+      const encodedRoadmap = await encodeRoadmapForUrl(DEMO_ROADMAP, { compress: false });
       router.push(`/roadmap/demo?roadmap=${encodeURIComponent(encodedRoadmap)}`);
     } catch {
       setIsOpening(false);
@@ -26,6 +26,7 @@ export function DemoRoadmapButton() {
 
   return (
     <button
+      data-tour="demo"
       type="button"
       onClick={() => void openDemo()}
       disabled={isOpening}

@@ -20,7 +20,7 @@ export function ServiceFallbackCard({ onDismiss }: ServiceFallbackCardProps) {
     setIsOpening(true);
 
     try {
-      const encoded = await encodeRoadmapForUrl(DEMO_ROADMAP);
+      const encoded = await encodeRoadmapForUrl(DEMO_ROADMAP, { compress: false });
       router.push(`/roadmap/demo?roadmap=${encodeURIComponent(encoded)}`);
     } catch {
       setIsOpening(false);

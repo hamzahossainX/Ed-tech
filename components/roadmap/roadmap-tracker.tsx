@@ -14,7 +14,9 @@ import { AdaptiveRoadmapDialog } from "@/components/roadmap/adaptive-roadmap-dia
 import { CareerInsightsWidget } from "@/components/roadmap/career-insights-widget";
 import { MilestoneQuizDialog } from "@/components/roadmap/milestone-quiz-dialog";
 import { RoadmapExportMenu } from "@/components/roadmap/roadmap-export-menu";
+import { RoadmapFeedback } from "@/components/roadmap/roadmap-feedback";
 import { RoadmapCriticDialog } from "@/components/roadmap/roadmap-critic-dialog";
+import { RoadmapComparisonDialog } from "@/components/roadmap/roadmap-comparison-dialog";
 import { RoadmapListenButton } from "@/components/roadmap/roadmap-listen-button";
 import { RoadmapMindMap } from "@/components/roadmap/roadmap-mind-map";
 import { RoadmapNotionButton } from "@/components/roadmap/roadmap-notion-button";
@@ -292,14 +294,15 @@ export function RoadmapTracker({ roadmap, isSharedSnapshot = false, isDemoMode =
       {roadmapForStorage.careerInsights && (
         <CareerInsightsWidget insights={roadmapForStorage.careerInsights} />
       )}
-      <header className="grid gap-5 border-b border-black/8 p-4 dark:border-white/8 sm:p-6 md:grid-cols-[1fr_auto] md:gap-8 md:p-8 lg:p-10">
+      <header data-tour="roadmap-header" className="grid gap-5 border-b border-black/8 p-4 dark:border-white/8 sm:p-6 md:grid-cols-[1fr_auto] md:gap-8 md:p-8 lg:p-10">
         <div>
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="flex flex-wrap items-center gap-2 text-[10px] font-black uppercase tracking-[.16em] text-[#3c7156] dark:text-[#a9e950] sm:text-xs sm:tracking-[.2em]"><BadgeCheck size={16} /> Your personal path {isDemoMode && <span className="rounded-full bg-[#c8ff65] px-2 py-1 text-[9px] tracking-[.12em] text-[#17211b]">Offline demo</span>}</div>
-            <div className="flex flex-wrap items-center justify-end gap-2">
+            <div data-tour="roadmap-actions" className="flex flex-wrap items-center justify-end gap-2">
               <StudyStreakDialog events={studyActivity} />
               <WorkloadHeatmapDialog roadmap={currentRoadmap} />
               <AchievementGallery unlocked={achievements} />
+              <RoadmapComparisonDialog roadmap={currentRoadmap} />
               <RoadmapShareButton disabled={isPending} roadmap={currentRoadmap} />
               <RoadmapNotionButton disabled={isPending} roadmap={currentRoadmap} />
               <AdaptiveRoadmapDialog
@@ -340,12 +343,12 @@ export function RoadmapTracker({ roadmap, isSharedSnapshot = false, isDemoMode =
       <div className="p-4 sm:p-6 md:p-8 lg:p-10">
         <div className="mb-5 flex flex-col gap-4 sm:mb-7 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-2 text-sm font-semibold text-black/45 dark:text-white/45"><Clock3 className="shrink-0" size={16} /> Estimated path: {roadmapState.estimatedDuration}</div>
-          <div className="inline-flex w-fit rounded-xl border border-black/8 bg-black/[.025] p-1 dark:border-white/10 dark:bg-white/5" role="tablist" aria-label="Roadmap view">
+          <div data-tour="view-switcher" className="inline-flex w-fit rounded-xl border border-black/8 bg-black/[.025] p-1 dark:border-white/10 dark:bg-white/5" role="tablist" aria-label="Roadmap view">
             <button type="button" role="tab" aria-selected={activeView === "timeline"} onClick={() => setActiveView("timeline")} className={cn("inline-flex min-h-9 items-center gap-2 rounded-lg px-3 text-xs font-black transition sm:text-sm", activeView === "timeline" ? "bg-white text-[#28583f] shadow-sm dark:bg-white/10 dark:text-[#c8ff65]" : "text-black/45 hover:text-black dark:text-white/45 dark:hover:text-white")}><ListTree size={15} /> Timeline View</button>
             <button type="button" role="tab" aria-selected={activeView === "mind-map"} onClick={() => setActiveView("mind-map")} className={cn("inline-flex min-h-9 items-center gap-2 rounded-lg px-3 text-xs font-black transition sm:text-sm", activeView === "mind-map" ? "bg-white text-[#28583f] shadow-sm dark:bg-white/10 dark:text-[#c8ff65]" : "text-black/45 hover:text-black dark:text-white/45 dark:hover:text-white")}><Workflow size={15} /> Mind Map View</button>
           </div>
         </div>
-        {activeView === "timeline" ? <ol className="relative space-y-3 before:absolute before:bottom-7 before:left-[1.1rem] before:top-7 before:w-px before:bg-black/10 dark:before:bg-white/10 sm:space-y-4 sm:before:left-[1.35rem]">
+        {activeView === "timeline" ? <ol data-tour="milestone-list" className="relative space-y-3 before:absolute before:bottom-7 before:left-[1.1rem] before:top-7 before:w-px before:bg-black/10 dark:before:bg-white/10 sm:space-y-4 sm:before:left-[1.35rem]">
           {milestones.map((item, index) => (
             <motion.li initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: index * .05 }} key={item.id} onClick={() => openFocusMode(item)} onKeyDown={(event) => { if (item.exhaustiveDeepDive && (event.key === "Enter" || event.key === " ")) { event.preventDefault(); openFocusMode(item); } }} role={item.exhaustiveDeepDive ? "button" : undefined} tabIndex={item.exhaustiveDeepDive ? 0 : undefined} aria-label={item.exhaustiveDeepDive ? `Open focus mode for ${item.title}` : undefined} className={cn("group relative flex gap-3 overflow-hidden rounded-2xl border p-3 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3c7156] dark:focus-visible:ring-[#a9e950] sm:gap-5 sm:p-5", item.exhaustiveDeepDive && "cursor-pointer pr-10 hover:border-black/20 hover:bg-black/[.025] dark:hover:border-white/20 dark:hover:bg-white/5 sm:pr-14", item.isCompleted ? "border-[#3c7156]/15 bg-[#f5faee] dark:border-[#a9e950]/15 dark:bg-[#a9e950]/[.045]" : "border-black/8 bg-white dark:border-white/8 dark:bg-white/[.025]")}>
               <button type="button" role="checkbox" aria-checked={item.isCompleted} disabled={isPending} onClick={(event) => { event.stopPropagation(); handleToggle(item); }} aria-label={`${item.isCompleted ? "Mark incomplete" : "Complete"} ${item.title}`} className={cn("relative z-10 grid size-9 shrink-0 place-items-center rounded-full border-2 transition sm:size-11", item.isCompleted ? "border-[#3c7156] bg-[#3c7156] text-white dark:border-[#a9e950] dark:bg-[#a9e950] dark:text-[#17211b]" : "border-black/15 bg-white text-black/25 hover:border-[#3c7156] dark:border-white/15 dark:bg-[#111512] dark:text-white/25 dark:hover:border-[#a9e950]")}>{item.isCompleted ? <Check size={18} strokeWidth={3} /> : <Circle size={12} fill="currentColor" />}</button>
@@ -370,6 +373,7 @@ export function RoadmapTracker({ roadmap, isSharedSnapshot = false, isDemoMode =
         {!isSharedSnapshot && (
           <ClaimCertificateDialog roadmapId={roadmapState.id} isComplete={progress === 100 && milestones.length > 0} claimedName={roadmapState.userName} />
         )}
+        <RoadmapFeedback roadmapId={roadmapState.id} />
       </div>
       <Dialog open={Boolean(activeMilestone)} onOpenChange={(open) => { if (!open) setActiveMilestone(null); }}>
         <DialogContent overlayClassName="bg-black/40 backdrop-blur-md" className="flex max-h-[85vh] w-[95vw] max-w-4xl flex-col overflow-hidden rounded-3xl border-slate-800 bg-slate-950/90 p-0 text-slate-100 shadow-[0_32px_120px_rgba(0,0,0,.6)] backdrop-blur-xl md:p-0">

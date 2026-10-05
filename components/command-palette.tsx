@@ -74,7 +74,7 @@ export function CommandPalette() {
         hint: "Explore LearnX without an API call",
         icon: PlayCircle,
         run: async () => {
-          const encoded = await encodeRoadmapForUrl(DEMO_ROADMAP);
+          const encoded = await encodeRoadmapForUrl(DEMO_ROADMAP, { compress: false });
           router.push(`/roadmap/demo?roadmap=${encodeURIComponent(encoded)}`);
         },
       },

@@ -2,10 +2,7 @@
 
 ## About
 
-LearnX is an AI-powered EdTech platform that converts natural-language goals into structured, week-by-week learning roadmaps. It features real-time milestone tracking, AI mentorship, interactive ELI5 breakdowns, and downloadable completion certificates.
-
-
-The current version does not require an account. This keeps the demo flow short, but it also means that anyone with a roadmap URL can view and update that roadmap. See [Security model](#security-model) before using the project with private data.
+LearnX is an AI-powered EdTech platform that converts natural-language goals into structured, week-by-week learning roadmaps. It features milestone tracking, AI mentorship, interactive ELI5 breakdowns, downloadable completion certificates, and a deterministic offline demo. Live generation requires an account; the offline demo remains frictionless for judges.
 
 ## Features
 
@@ -19,6 +16,11 @@ The current version does not require an account. This keeps the demo flow short,
 - Simplify technical milestones into four or five child-friendly ELI5 points
 - Track completion with a progress bar and completion confetti
 - Export a complete roadmap as a multi-page PDF or Notion-ready Markdown
+- Compare a roadmap with the offline demo or an imported LearnX share link
+- Collect private browser-only roadmap feedback
+- Run a route-aware 60-second judge tour
+- Visualize roadmap workload, study streaks, achievements, and Mermaid mind maps
+- Verify utilities and critical browser flows with Vitest and Playwright
 - Run the same application locally or on Vercel
 
 ## Technology
@@ -208,6 +210,8 @@ Never expose database, Groq, or Cloudinary secrets through variables prefixed wi
 | `npm run dev` | Start the local Turbopack development server |
 | `npm run build` | Create and validate a production build |
 | `npm run start` | Run the compiled production server |
+| `npm run test:unit` | Run the Vitest unit and component suite |
+| `npm run test:e2e` | Build the app and run Playwright Chromium smoke tests |
 | `npm run vercel-build` | Build command used by Vercel |
 | `npm run db:generate` | Generate a migration after a schema change |
 | `npm run db:migrate` | Apply pending migrations |
@@ -267,11 +271,17 @@ Before using LearnX for private or multi-user data:
 
 ## Verification
 
-Run the production build before opening a pull request:
+Run both automated suites before opening a pull request:
 
 ```bash
-npm run build
+npm run test:unit
+npm run test:e2e
 ```
+
+The Playwright command starts the compiled production server rather than the
+Turbopack development server, so navigation timings match the Vercel runtime
+more closely. Test screenshots, traces, coverage, and reports are ignored by
+Git.
 
 For roadmap changes, test this sequence locally:
 

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Toaster } from "sonner";
 import { ThemeProvider } from "@/components/theme-provider";
+import { GuidedTour } from "@/components/tour/guided-tour";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -17,6 +18,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
             {children}
           </div>
           <Toaster richColors closeButton position="top-right" theme="system" />
+          <GuidedTour />
         </ThemeProvider>
       </body>
     </html>
