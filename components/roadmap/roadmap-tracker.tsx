@@ -10,6 +10,7 @@ import { simplifyMilestone } from "@/app/actions/simplify-milestone";
 import { toggleMilestone } from "@/app/actions/toggle-milestone";
 import { ClaimCertificateDialog } from "@/components/certificate/claim-certificate-dialog";
 import { CareerInsightsWidget } from "@/components/roadmap/career-insights-widget";
+import { MilestoneQuizDialog } from "@/components/roadmap/milestone-quiz-dialog";
 import { RoadmapExportMenu } from "@/components/roadmap/roadmap-export-menu";
 import { RoadmapShareButton } from "@/components/roadmap/roadmap-share-button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -91,6 +92,7 @@ export function RoadmapTracker({ roadmap, isSharedSnapshot = false }: Props) {
   const [roadmapState, setRoadmapState] = useState(serverSnapshot);
   const [storageReady, setStorageReady] = useState(false);
   const [activeMilestone, setActiveMilestone] = useState<TrackerMilestone | null>(null);
+  const [quizMilestone, setQuizMilestone] = useState<TrackerMilestone | null>(null);
   const [simplifyingMilestoneId, setSimplifyingMilestoneId] = useState<string | null>(null);
   const [eli5ByMilestone, setEli5ByMilestone] = useState<Record<string, string[]>>(() =>
     Object.fromEntries(
@@ -134,8 +136,7 @@ export function RoadmapTracker({ roadmap, isSharedSnapshot = false }: Props) {
     if (storageReady) persistRoadmapSnapshot(roadmapForStorage);
   }, [roadmapForStorage, storageReady]);
 
-  function handleToggle(item: TrackerMilestone) {
-    const next = !item.isCompleted;
+  function updateMilestoneCompletion(item: TrackerMilestone, next: boolean) {
     const completesRoadmap = next && completed + 1 === milestones.length;
     startTransition(async () => {
       setOptimistic({ id: item.id, completed: next });
@@ -157,6 +158,15 @@ export function RoadmapTracker({ roadmap, isSharedSnapshot = false }: Props) {
         });
       }
     });
+  }
+
+  function handleToggle(item: TrackerMilestone) {
+    if (item.isCompleted) {
+      updateMilestoneCompletion(item, false);
+      return;
+    }
+
+    setQuizMilestone(item);
   }
 
   function openFocusMode(item: TrackerMilestone) {
@@ -301,6 +311,16 @@ export function RoadmapTracker({ roadmap, isSharedSnapshot = false }: Props) {
           )}
         </DialogContent>
       </Dialog>
+      <MilestoneQuizDialog
+        milestone={quizMilestone}
+        onOpenChange={(open) => {
+          if (!open) setQuizMilestone(null);
+        }}
+        onPassed={(passedMilestone) => {
+          const matchingMilestone = milestones.find((item) => item.id === passedMilestone.id);
+          if (matchingMilestone) updateMilestoneCompletion(matchingMilestone, true);
+        }}
+      />
     </section>
   );
 }
