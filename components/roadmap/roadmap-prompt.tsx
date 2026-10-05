@@ -6,6 +6,7 @@ import { ArrowUpRight, Mic, ShieldCheck, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { generateRoadmap, type GenerateRoadmapState } from "@/app/actions/generate-roadmap";
 import { LoginRequiredDialog } from "@/components/roadmap/login-required-dialog";
+import { ServiceFallbackCard } from "@/components/roadmap/service-fallback-card";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
@@ -87,6 +88,8 @@ async function submitRoadmap(
         success: false,
         error: "GENERATION_INCOMPLETE",
         isGenerationIncomplete: true,
+        shouldOfferOfflineDemo: true,
+        offlineFallbackAt: Date.now(),
       };
     }
 
@@ -108,6 +111,8 @@ async function submitRoadmap(
       return {
         success: false,
         error: BUSY_SERVER_MESSAGE,
+        shouldOfferOfflineDemo: true,
+        offlineFallbackAt: Date.now(),
       };
     }
 
@@ -119,6 +124,8 @@ async function submitRoadmap(
     return {
       success: false,
       error: BUSY_SERVER_MESSAGE,
+      shouldOfferOfflineDemo: true,
+      offlineFallbackAt: Date.now(),
     };
   }
 }
@@ -147,6 +154,7 @@ export function RoadmapPrompt({ isAuthenticated }: RoadmapPromptProps) {
   const [selectedModel, setSelectedModel] = useState("groq-ultra-speed");
   const [limitOpen, setLimitOpen] = useState(false);
   const [loginOpen, setLoginOpen] = useState(false);
+  const [offlineFallbackOpen, setOfflineFallbackOpen] = useState(false);
   const promptRef = useRef<HTMLTextAreaElement>(null);
 
   const handleVoiceTranscript = useCallback((transcript: string) => {
@@ -178,8 +186,15 @@ export function RoadmapPrompt({ isAuthenticated }: RoadmapPromptProps) {
     if (state.error === AUTH_REQUIRED_ERROR) setLoginOpen(true);
   }, [state.error, state.authRequiredAt]);
 
+  useEffect(() => {
+    if (state.shouldOfferOfflineDemo) setOfflineFallbackOpen(true);
+  }, [state.shouldOfferOfflineDemo, state.offlineFallbackAt]);
+
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
-    if (isAuthenticated) return;
+    if (isAuthenticated) {
+      setOfflineFallbackOpen(false);
+      return;
+    }
 
     // Preventing the default stops React from invoking the form action at all,
     // so the button never spins for a request that cannot succeed.
@@ -259,7 +274,7 @@ export function RoadmapPrompt({ isAuthenticated }: RoadmapPromptProps) {
         </div>
         <div className="mt-4 flex max-w-full flex-wrap items-center gap-2 text-xs text-white/45"><span className="mr-1 font-semibold text-white/55">Try:</span>{suggestions.map((suggestion) => <button key={suggestion} type="button" onClick={() => selectSuggestion(suggestion)} aria-label={`Use prompt: ${suggestion}`} className="max-w-full break-words rounded-full border border-white/15 px-3 py-2 text-left leading-4 text-white/65 transition hover:-translate-y-0.5 hover:border-[#c8ff65]/50 hover:bg-[#c8ff65]/10 hover:text-[#c8ff65] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#c8ff65]">{suggestion}</button>)}</div>
       </div>
-    </form><Dialog open={limitOpen} onOpenChange={setLimitOpen}><DialogContent className="max-w-md border-white/10 bg-[#fffefa] dark:bg-[#111512] dark:text-white"><DialogHeader><div className="mb-3 grid size-14 place-items-center rounded-2xl bg-[#c8ff65] text-2xl shadow-[0_0_35px_rgba(200,255,101,.25)]">🚀</div><DialogTitle>Daily Limit Reached</DialogTitle><DialogDescription className="dark:text-white/55">{DAILY_LIMIT_MESSAGE} Your allowance resets at midnight.</DialogDescription></DialogHeader><button type="button" onClick={() => setLimitOpen(false)} className="mt-5 min-h-11 w-full rounded-xl bg-[#173f2c] px-5 font-black text-white transition hover:bg-[#21573d] dark:bg-[#c8ff65] dark:text-[#17211b]">Got it</button></DialogContent></Dialog><LoginRequiredDialog open={loginOpen} onOpenChange={setLoginOpen} /></>
+    </form>{offlineFallbackOpen && <ServiceFallbackCard onDismiss={() => setOfflineFallbackOpen(false)} />}<Dialog open={limitOpen} onOpenChange={setLimitOpen}><DialogContent className="max-w-md border-white/10 bg-[#fffefa] dark:bg-[#111512] dark:text-white"><DialogHeader><div className="mb-3 grid size-14 place-items-center rounded-2xl bg-[#c8ff65] text-2xl shadow-[0_0_35px_rgba(200,255,101,.25)]">🚀</div><DialogTitle>Daily Limit Reached</DialogTitle><DialogDescription className="dark:text-white/55">{DAILY_LIMIT_MESSAGE} Your allowance resets at midnight.</DialogDescription></DialogHeader><button type="button" onClick={() => setLimitOpen(false)} className="mt-5 min-h-11 w-full rounded-xl bg-[#173f2c] px-5 font-black text-white transition hover:bg-[#21573d] dark:bg-[#c8ff65] dark:text-[#17211b]">Got it</button></DialogContent></Dialog><LoginRequiredDialog open={loginOpen} onOpenChange={setLoginOpen} /></>
   );
 }
 

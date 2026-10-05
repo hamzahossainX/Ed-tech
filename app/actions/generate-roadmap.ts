@@ -92,6 +92,8 @@ export type GenerateRoadmapState = {
   violationReason?: string;
   isGibberish?: boolean;
   isGenerationIncomplete?: boolean;
+  shouldOfferOfflineDemo?: boolean;
+  offlineFallbackAt?: number;
   limitReachedAt?: number;
   authRequiredAt?: number;
 };
