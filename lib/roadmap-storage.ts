@@ -1,5 +1,6 @@
 import type { ResourceLink } from "@/db/schema";
 import type { CareerInsights } from "@/lib/career-insights";
+import { mermaidSyntaxSchema } from "@/lib/roadmap-mind-map";
 
 const ACTIVE_ROADMAP_STORAGE_KEY = "learnx:active-roadmap:v1";
 const STORAGE_VERSION = 1;
@@ -26,6 +27,7 @@ export type RecoverableRoadmap = {
   description: string;
   estimatedDuration: string;
   careerInsights?: CareerInsights | null;
+  mermaidSyntax?: string | null;
   updatedAt: string;
   milestones: RecoverableMilestone[];
 };
@@ -99,6 +101,7 @@ export function isRecoverableRoadmap(value: unknown): value is RecoverableRoadma
     && typeof value.description === "string"
     && typeof value.estimatedDuration === "string"
     && (value.careerInsights === undefined || value.careerInsights === null || isCareerInsights(value.careerInsights))
+    && (value.mermaidSyntax === undefined || value.mermaidSyntax === null || mermaidSyntaxSchema.safeParse(value.mermaidSyntax).success)
     && typeof value.updatedAt === "string"
     && Number.isFinite(Date.parse(value.updatedAt))
     && Array.isArray(value.milestones)
@@ -122,6 +125,7 @@ export function createRoadmapSnapshot(roadmap: ServerRoadmap): RecoverableRoadma
     description: roadmap.description,
     estimatedDuration: roadmap.estimatedDuration,
     careerInsights: roadmap.careerInsights ?? null,
+    mermaidSyntax: roadmap.mermaidSyntax ?? null,
     updatedAt: new Date(roadmap.updatedAt).toISOString(),
     milestones: roadmap.milestones.map((milestone) => ({
       id: milestone.id,

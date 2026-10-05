@@ -9,6 +9,7 @@ import { Header } from "@/components/Header";
 import { db } from "@/db";
 import { aiRoadmaps } from "@/db/schema";
 import { parseCareerInsightsQuery } from "@/lib/career-insights";
+import { parseMindMapQuery } from "@/lib/roadmap-mind-map";
 
 type Props = {
   params: Promise<{ id: string }>;
@@ -41,11 +42,12 @@ export default async function RoadmapPage({ params, searchParams }: Props) {
 
   if (!z.string().uuid().safeParse(id).success) notFound();
   const careerInsights = parseCareerInsightsQuery(resolvedSearchParams);
+  const mermaidSyntax = parseMindMapQuery(resolvedSearchParams);
   const roadmap = await db.query.aiRoadmaps.findFirst({
     where: eq(aiRoadmaps.id, id),
     with: { milestones: { orderBy: (milestones, { asc }) => [asc(milestones.position)] } },
   });
   if (!roadmap) notFound();
 
-  return <main className="min-h-screen pb-12 sm:pb-20"><Header contentClassName="max-w-6xl"><Link href="/" className="flex min-h-10 items-center gap-2 text-xs font-bold text-black/50 hover:text-black dark:text-white/55 dark:hover:text-white sm:text-sm"><ArrowLeft className="shrink-0" size={16} /> New roadmap</Link></Header><div className="mx-auto max-w-6xl px-3 pt-3 sm:px-6 sm:pt-8"><RoadmapTracker roadmap={{ ...roadmap, careerInsights }} /></div></main>;
+  return <main className="min-h-screen pb-12 sm:pb-20"><Header contentClassName="max-w-6xl"><Link href="/" className="flex min-h-10 items-center gap-2 text-xs font-bold text-black/50 hover:text-black dark:text-white/55 dark:hover:text-white sm:text-sm"><ArrowLeft className="shrink-0" size={16} /> New roadmap</Link></Header><div className="mx-auto max-w-6xl px-3 pt-3 sm:px-6 sm:pt-8"><RoadmapTracker roadmap={{ ...roadmap, careerInsights, mermaidSyntax }} /></div></main>;
 }

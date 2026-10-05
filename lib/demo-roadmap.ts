@@ -11,6 +11,16 @@ export const DEMO_ROADMAP: RecoverableRoadmap = {
     entrySalary: "$65,000–$95,000 USD annually in the United States",
     topRoles: ["Junior Full-Stack Developer", "Next.js Developer", "Frontend Engineer"],
   },
+  mermaidSyntax: `flowchart TD
+  start(["Full-Stack Next.js Developer"])
+  m1["1. JavaScript and React Foundations"]
+  m2["2. App Router and Server Actions"]
+  m3["3. PostgreSQL and Authentication"]
+  m4["4. Testing and Deployment"]
+  start --> m1
+  m1 --> m2
+  m2 --> m3
+  m3 --> m4`,
   updatedAt: "2026-10-05T00:00:00.000Z",
   milestones: [
     {

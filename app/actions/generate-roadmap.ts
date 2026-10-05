@@ -26,6 +26,7 @@ import {
 } from "@/lib/roadmap-access";
 import { getSignedInEmail } from "@/lib/require-session";
 import { ROADMAP_PROMPT_ERROR, roadmapPromptSchema } from "@/lib/roadmap-validation";
+import { appendMindMapQuery, mermaidSyntaxSchema } from "@/lib/roadmap-mind-map";
 
 const milestoneSchema = z.object({
   title: z.string().min(3).max(120),
@@ -51,6 +52,7 @@ function createRoadmapSchema(isAdvanced: boolean) {
   title: z.string().min(3).max(120),
   description: z.string().min(10).max(500),
   estimatedDuration: z.string().min(2).max(50),
+  mermaidSyntax: mermaidSyntaxSchema,
     milestones: z.preprocess(
       (value) => normalizeGeneratedMilestones(value, maximumMilestones),
       z.array(isAdvanced ? advancedMilestoneSchema : milestoneSchema).min(3).max(maximumMilestones),
@@ -194,6 +196,7 @@ function createRoadmapJsonSchema(isAdvanced: boolean) {
           title: { type: "string" },
           description: { type: "string" },
           estimatedDuration: { type: "string" },
+          mermaidSyntax: { type: "string" },
           milestones: {
             type: "array",
             minItems: 3,
@@ -206,7 +209,7 @@ function createRoadmapJsonSchema(isAdvanced: boolean) {
             },
           },
         },
-        required: ["title", "description", "estimatedDuration", "milestones"],
+        required: ["title", "description", "estimatedDuration", "mermaidSyntax", "milestones"],
       }, { type: "null" }],
     },
     careerInsights: {
@@ -326,7 +329,7 @@ Next, evaluate whether the input has coherent meaning. Treat meaningless letter 
 
 If the input is coherent and harmless but is NOT related to learning a skill, academic subject, technology, career path, or professional development, refuse without a security warning. Return exactly: {"isValidTopic":false,"isPolicyViolation":false,"violationReason":null,"isGibberish":false,"message":"${EDUCATIONAL_REFUSAL_MESSAGE}","roadmap":null,"careerInsights":null}.
 
-For a valid educational topic, return {"isValidTopic":true,"isPolicyViolation":false,"violationReason":null,"isGibberish":false,"message":"","roadmap":{...},"careerInsights":{"marketDemand":"...","entrySalary":"...","topRoles":["..."]}}. Create a practical, sequential roadmap and respect the learner's stated time limit. Keep explanations brief to avoid token truncation. Keep the roadmap description under 60 words and each milestone description to no more than two short sentences. Every milestone must include one or two real, high-quality HTTPS resources that directly teach it. Prefer stable pages from official documentation, standards organizations, universities, MDN, or freeCodeCamp. Do not invent domains or URLs. Use specific page URLs rather than generic homepages. Also provide concise careerInsights for the completed skill: marketDemand must be a short directional assessment, entrySalary must be an approximate annual entry-level range with currency and region (default to USD/United States when the user gives no location), and topRoles must contain one to four realistic job titles. These are general AI estimates, not live market data; do not claim real-time statistics.${isAdvanced ? " ADVANCED MODE MUST contain exactly 3 broad milestones, and EVERY milestone MUST include exhaustiveDeepDive. Keep each exhaustiveDeepDive focused at roughly 450 to 650 words using compact Markdown. Every guide MUST include: 1. A concise explanation of the core concepts. 2. Practical implementation or code examples with fenced Markdown code blocks. 3. Exactly 3 common interview questions with concise solutions. Use short headings and lists, avoid repetition, and omit nonessential background. Do not omit exhaustiveDeepDive from any milestone, and do not put the entire Markdown string inside an extra fenced code block. The roadmap object must contain title, description, estimatedDuration, and milestones. Every milestone must contain title, description, duration, resources, and exhaustiveDeepDive." : " STANDARD MODE MUST contain 3 to 12 concise milestones and must not add exhaustiveDeepDive."}
+For a valid educational topic, return {"isValidTopic":true,"isPolicyViolation":false,"violationReason":null,"isGibberish":false,"message":"","roadmap":{...},"careerInsights":{"marketDemand":"...","entrySalary":"...","topRoles":["..."]}}. Create a practical, sequential roadmap and respect the learner's stated time limit. The roadmap object MUST include mermaidSyntax: a compact Mermaid top-down flowchart beginning exactly with "flowchart TD". It must contain one safe text-only node for the roadmap goal followed by one node per milestone, connected sequentially in the same order as the milestones array. Use simple alphanumeric node IDs, quoted labels, and --> arrows only. Do not include click, href, init directives, HTML, styling, scripts, or external content in Mermaid. Keep explanations brief to avoid token truncation. Keep the roadmap description under 60 words and each milestone description to no more than two short sentences. Every milestone must include one or two real, high-quality HTTPS resources that directly teach it. Prefer stable pages from official documentation, standards organizations, universities, MDN, or freeCodeCamp. Do not invent domains or URLs. Use specific page URLs rather than generic homepages. Also provide concise careerInsights for the completed skill: marketDemand must be a short directional assessment, entrySalary must be an approximate annual entry-level range with currency and region (default to USD/United States when the user gives no location), and topRoles must contain one to four realistic job titles. These are general AI estimates, not live market data; do not claim real-time statistics.${isAdvanced ? " ADVANCED MODE MUST contain exactly 3 broad milestones, and EVERY milestone MUST include exhaustiveDeepDive. Keep each exhaustiveDeepDive focused at roughly 450 to 650 words using compact Markdown. Every guide MUST include: 1. A concise explanation of the core concepts. 2. Practical implementation or code examples with fenced Markdown code blocks. 3. Exactly 3 common interview questions with concise solutions. Use short headings and lists, avoid repetition, and omit nonessential background. Do not omit exhaustiveDeepDive from any milestone, and do not put the entire Markdown string inside an extra fenced code block. The roadmap object must contain title, description, estimatedDuration, mermaidSyntax, and milestones. Every milestone must contain title, description, duration, resources, and exhaustiveDeepDive." : " STANDARD MODE MUST contain 3 to 12 concise milestones and must not add exhaustiveDeepDive."}
 
 ${isSecurityFocused ? "The user has enabled Security Focus. For every milestone in the roadmap, you MUST include a 'Security Note' highlighting potential vulnerabilities, OWASP principles, or secure coding practices relevant to that specific topic. Preserve the existing JSON schema: keep the core description to one short sentence, then add the security guidance as its second sentence beginning exactly with 'Security Note:', instead of creating a new JSON field. In Advanced Mode, also add a concise '## Security Note' section inside every exhaustiveDeepDive." : "Security Focus is disabled. Do not force security commentary into unrelated milestones."}
 
@@ -351,6 +354,7 @@ You must respond with one valid JSON object and nothing else. Never wrap the JSO
 
   let createdRoadmapId: string;
   let createdCareerInsights: CareerInsights | null = null;
+  let createdMermaidSyntax: string | null = null;
   try {
     async function requestGroqRoadmap(client: Groq, provider: string) {
       let rawContent: string;
@@ -561,6 +565,7 @@ You must respond with one valid JSON object and nothing else. Never wrap the JSO
 
     const roadmap = aiResponse.roadmap;
     createdCareerInsights = aiResponse.careerInsights;
+    createdMermaidSyntax = roadmap.mermaidSyntax;
     const milestonesJson = JSON.stringify(roadmap.milestones);
 
     const result = isAdvanced
@@ -604,7 +609,7 @@ You must respond with one valid JSON object and nothing else. Never wrap the JSO
     };
   }
 
-  if (!createdCareerInsights) {
+  if (!createdCareerInsights || !createdMermaidSyntax) {
     await releaseUsageReservation();
     return {
       success: false,
@@ -613,5 +618,7 @@ You must respond with one valid JSON object and nothing else. Never wrap the JSO
   }
 
   revalidatePath(`/roadmap/${createdRoadmapId}`);
-  redirect(`/roadmap/${createdRoadmapId}?${createCareerInsightsQuery(createdCareerInsights)}`);
+  const redirectParams = new URLSearchParams(createCareerInsightsQuery(createdCareerInsights));
+  appendMindMapQuery(redirectParams, createdMermaidSyntax);
+  redirect(`/roadmap/${createdRoadmapId}?${redirectParams.toString()}`);
 }
