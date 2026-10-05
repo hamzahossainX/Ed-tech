@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Check, ChevronDown, ClipboardCopy, Download, FileText, LoaderCircle } from "lucide-react";
+import { Check, ChevronDown, Download, FileText, LoaderCircle } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { toast } from "sonner";
@@ -33,61 +33,6 @@ type Props = {
   disabled?: boolean;
 };
 
-function escapeMarkdownLabel(value: string) {
-  return value.replace(/([\\`*_[\]<>])/g, "\\$1");
-}
-
-export function roadmapToMarkdown(roadmap: ExportRoadmap) {
-  const completed = roadmap.milestones.filter((item) => item.isCompleted).length;
-  const lines = [
-    `# ${roadmap.title}`,
-    "",
-    roadmap.description,
-    "",
-    `- **Estimated duration:** ${roadmap.estimatedDuration}`,
-    `- **Progress:** ${completed}/${roadmap.milestones.length} milestones completed`,
-    `- **LearnX roadmap ID:** \`${roadmap.id}\``,
-    "",
-  ];
-
-  for (const milestone of roadmap.milestones) {
-    lines.push(
-      `## ${milestone.position}. ${milestone.title}`,
-      "",
-      `- **Status:** ${milestone.isCompleted ? "Completed" : "Not completed"}`,
-      `- **Duration:** ${milestone.duration}`,
-      "",
-      milestone.description,
-      "",
-    );
-
-    if (milestone.resourceLinks.length) {
-      lines.push("### Resources", "");
-      for (const resource of milestone.resourceLinks) {
-        lines.push(`- [${escapeMarkdownLabel(resource.title)}](${resource.url})`);
-      }
-      lines.push("");
-    }
-
-    if (milestone.eli5Explanation?.length) {
-      lines.push("### Explain Like I'm 5", "");
-      for (const explanation of milestone.eli5Explanation) {
-        lines.push(`- ${explanation}`);
-      }
-      lines.push("");
-    }
-
-    if (milestone.exhaustiveDeepDive) {
-      lines.push("### Deep Dive", "", milestone.exhaustiveDeepDive, "");
-    }
-
-    lines.push("---", "");
-  }
-
-  lines.push("Generated with LearnX.", "");
-  return lines.join("\n");
-}
-
 export function safeFileName(title: string) {
   const slug = title
     .normalize("NFKD")
@@ -100,48 +45,9 @@ export function safeFileName(title: string) {
   return `${slug || "LearnX-Roadmap"}.pdf`;
 }
 
-async function copyText(text: string) {
-  if (navigator.clipboard && window.isSecureContext) {
-    try {
-      await navigator.clipboard.writeText(text);
-      return;
-    } catch {
-      // Some privacy-focused browsers expose the API but deny access. Fall
-      // through to the selection-based copy path for wider compatibility.
-    }
-  }
-
-  const textarea = document.createElement("textarea");
-  textarea.value = text;
-  textarea.setAttribute("readonly", "");
-  textarea.style.position = "fixed";
-  textarea.style.opacity = "0";
-  document.body.appendChild(textarea);
-  textarea.focus();
-  textarea.select();
-  textarea.setSelectionRange(0, textarea.value.length);
-  const copied = document.execCommand("copy");
-  textarea.remove();
-
-  if (!copied) throw new Error("Clipboard copy was rejected.");
-}
-
 export function RoadmapExportMenu({ roadmap, disabled = false }: Props) {
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
   const pdfTargetId = `roadmap-pdf-${roadmap.id}`;
-
-  async function handleCopyForNotion() {
-    try {
-      await copyText(roadmapToMarkdown(roadmap));
-      toast.success("Roadmap copied! Paste it into Notion to keep the formatting.", {
-        duration: 8_000,
-      });
-    } catch {
-      toast.error("We couldn't copy the roadmap. Please try again.", {
-        duration: 20_000,
-      });
-    }
-  }
 
   async function handleDownloadPdf() {
     const target = document.getElementById(pdfTargetId);
@@ -248,10 +154,6 @@ export function RoadmapExportMenu({ roadmap, disabled = false }: Props) {
           <DropdownMenuItem onSelect={() => void handleDownloadPdf()}>
             <FileText className="size-4" aria-hidden="true" />
             Download as PDF
-          </DropdownMenuItem>
-          <DropdownMenuItem onSelect={() => void handleCopyForNotion()}>
-            <ClipboardCopy className="size-4" aria-hidden="true" />
-            Copy for Notion
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
