@@ -12,6 +12,7 @@ import { ClaimCertificateDialog } from "@/components/certificate/claim-certifica
 import { CareerInsightsWidget } from "@/components/roadmap/career-insights-widget";
 import { MilestoneQuizDialog } from "@/components/roadmap/milestone-quiz-dialog";
 import { RoadmapExportMenu } from "@/components/roadmap/roadmap-export-menu";
+import { RoadmapNotionButton } from "@/components/roadmap/roadmap-notion-button";
 import { RoadmapShareButton } from "@/components/roadmap/roadmap-share-button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import type { CareerInsights } from "@/lib/career-insights";
@@ -209,6 +210,7 @@ export function RoadmapTracker({ roadmap, isSharedSnapshot = false }: Props) {
             <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[.16em] text-[#3c7156] dark:text-[#a9e950] sm:text-xs sm:tracking-[.2em]"><BadgeCheck size={16} /> Your personal path</div>
             <div className="flex flex-wrap items-center justify-end gap-2">
               <RoadmapShareButton disabled={isPending} roadmap={currentRoadmap} />
+              <RoadmapNotionButton disabled={isPending} roadmap={currentRoadmap} />
               <RoadmapExportMenu disabled={isPending} roadmap={currentRoadmap} />
             </div>
           </div>
