@@ -51,3 +51,15 @@ body {
 .focus-scrollbar::-webkit-scrollbar-track { background: transparent; }
 .focus-scrollbar::-webkit-scrollbar-thumb { border-radius: 999px; background: rgba(198, 248, 94, .28); }
 .focus-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(198, 248, 94, .5); }
+
+.landing-grid {
+  background-image:
+    linear-gradient(rgba(60, 113, 86, .09) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(60, 113, 86, .09) 1px, transparent 1px);
+  background-size: 64px 64px;
+  mask-image: linear-gradient(to bottom, black, transparent 90%);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+}

@@ -130,9 +130,12 @@ async function submitRoadmap(
   }
 }
 
-type RoadmapPromptProps = { isAuthenticated: boolean };
+type RoadmapPromptProps = {
+  isAuthenticated: boolean;
+  promptRequest?: { text: string; id: number };
+};
 
-export function RoadmapPrompt({ isAuthenticated }: RoadmapPromptProps) {
+export function RoadmapPrompt({ isAuthenticated, promptRequest }: RoadmapPromptProps) {
   // Second of two gates on the client. `handleSubmit` stops the event before
   // React starts the action, which is what keeps the button out of its pending
   // state; this wrapper guarantees no Server Action call is ever issued from a
@@ -156,6 +159,10 @@ export function RoadmapPrompt({ isAuthenticated }: RoadmapPromptProps) {
   const [loginOpen, setLoginOpen] = useState(false);
   const [offlineFallbackOpen, setOfflineFallbackOpen] = useState(false);
   const promptRef = useRef<HTMLTextAreaElement>(null);
+
+  useEffect(() => {
+    if (promptRequest) setPrompt(promptRequest.text.slice(0, 80));
+  }, [promptRequest]);
 
   const handleVoiceTranscript = useCallback((transcript: string) => {
     setPrompt(transcript);
