@@ -177,8 +177,8 @@ export function RoadmapTracker({ roadmap, isSharedSnapshot = false, isDemoMode =
   }, [isDemoMode, isSharedSnapshot, serverSnapshot]);
 
   useEffect(() => {
-    if (storageReady) persistRoadmapSnapshot(roadmapForStorage);
-  }, [roadmapForStorage, storageReady]);
+    if (storageReady) persistRoadmapSnapshot(roadmapForStorage, isDemoMode ? "demo" : isSharedSnapshot ? "shared" : "server");
+  }, [roadmapForStorage, storageReady, isDemoMode, isSharedSnapshot]);
 
   useEffect(() => {
     setAchievements(readAchievements());
