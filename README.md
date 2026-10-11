@@ -6,6 +6,11 @@ LearnX is an AI-powered EdTech platform that converts natural-language goals int
 
 ## Features
 
+- Explore three sample learning paths in an interactive, gently tilting roadmap preview
+- Resume the last roadmap saved in this browser from the landing page
+- Use responsive landing interactions that respect reduced-motion preferences
+- Filter six starting paths by topic and bookmark favorites on this device
+- Set a weekly study schedule, see the time budget, and use it to prefill a roadmap goal
 - Generate a structured learning plan from a natural-language prompt
 - Store roadmaps and ordered milestones in Postgres
 - Attach one or two AI-suggested documentation links to each milestone
